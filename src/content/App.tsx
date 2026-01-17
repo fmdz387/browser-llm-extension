@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSelection } from '@/hooks';
 import { ResultOverlay } from './ResultOverlay';
 
-type ActionType = 'translate' | 'improve' | 'grammar' | null;
+type ActionType = 'translate' | 'improve' | 'grammar' | 'transform' | null;
 
 export function App() {
   const { text, rect, isEditable, element, hasSelection, clearSelection } = useSelection({
@@ -10,6 +10,7 @@ export function App() {
   });
 
   const [action, setAction] = useState<ActionType>(null);
+  const [transformationId, setTransformationId] = useState<string | null>(null);
   const [frozenSelection, setFrozenSelection] = useState<{
     text: string;
     rect: DOMRect | null;
@@ -19,8 +20,26 @@ export function App() {
 
   // Listen for context menu actions from background script
   useEffect(() => {
-    const handleMessage = (message: { type: string; action?: string }) => {
+    const handleMessage = (message: {
+      type: string;
+      action?: string;
+      transformationId?: string;
+    }) => {
       if (message.type === 'CONTEXT_MENU_ACTION' && hasSelection) {
+        // Handle transform action with transformationId
+        if (message.action === 'transform' && message.transformationId) {
+          setFrozenSelection({
+            text,
+            rect,
+            isEditable,
+            element,
+          });
+          setTransformationId(message.transformationId);
+          setAction('transform');
+          return;
+        }
+
+        // Handle legacy actions (translate, improve, grammar)
         const actionMap: Record<string, ActionType> = {
           translate: 'translate',
           improve: 'improve',
@@ -36,6 +55,7 @@ export function App() {
             isEditable,
             element,
           });
+          setTransformationId(null);
           setAction(newAction);
         }
       }
@@ -47,6 +67,7 @@ export function App() {
 
   const handleClose = useCallback(() => {
     setAction(null);
+    setTransformationId(null);
     setFrozenSelection(null);
     clearSelection();
   }, [clearSelection]);
@@ -97,6 +118,7 @@ export function App() {
           selectedText={activeSelection.text}
           selectionRect={activeSelection.rect}
           action={action}
+          transformationId={transformationId}
           onClose={handleClose}
           onReplace={activeSelection.isEditable ? handleReplace : undefined}
           isEditable={activeSelection.isEditable}

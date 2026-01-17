@@ -1,16 +1,17 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
-import { useOverlayPosition, useStreamingResponse } from '@/hooks';
-import { sendMessage } from '@/utils/messaging';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/ui/spinner';
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
+import { useStreamingResponse } from '@/hooks';
 import { cn } from '@/lib/utils';
+import { sendMessage } from '@/utils/messaging';
+import { Check, ClipboardCopy, Loader, Replace, Sparkles, X, XCircle } from 'lucide-react';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ResultOverlayProps {
   selectedText: string;
   selectionRect: DOMRect | null;
-  action: 'translate' | 'improve' | 'grammar' | null;
+  action: 'translate' | 'improve' | 'grammar' | 'transform' | null;
+  transformationId?: string | null;
   onClose: () => void;
   onReplace?: (text: string) => void;
   isEditable: boolean;
@@ -18,20 +19,68 @@ interface ResultOverlayProps {
 
 type RequestStatus = 'idle' | 'loading' | 'streaming' | 'complete' | 'error';
 
+// Status configuration with colored background icons following blogr-web design
+const STATUS_CONFIG: Record<
+  RequestStatus,
+  {
+    icon: typeof Loader;
+    bgClass: string;
+    iconClass: string;
+    animate?: boolean;
+  }
+> = {
+  idle: {
+    icon: Sparkles,
+    bgClass: 'bg-slate-100 dark:bg-slate-800',
+    iconClass: 'text-slate-600 dark:text-slate-400',
+  },
+  loading: {
+    icon: Loader,
+    bgClass: 'bg-blue-100 dark:bg-blue-900/30',
+    iconClass: 'text-blue-600 dark:text-blue-400',
+    animate: true,
+  },
+  streaming: {
+    icon: Sparkles,
+    bgClass: 'bg-blue-100 dark:bg-blue-900/30',
+    iconClass: 'text-blue-600 dark:text-blue-400',
+    animate: true,
+  },
+  complete: {
+    icon: Check,
+    bgClass: 'bg-emerald-100 dark:bg-emerald-900/30',
+    iconClass: 'text-emerald-600 dark:text-emerald-400',
+  },
+  error: {
+    icon: XCircle,
+    bgClass: 'bg-red-100 dark:bg-red-900/30',
+    iconClass: 'text-red-600 dark:text-red-400',
+  },
+};
+
+// Action labels for header
+const ACTION_LABELS: Record<string, string> = {
+  translate: 'Translation',
+  improve: 'Improved',
+  grammar: 'Grammar',
+  transform: 'Transform',
+};
+
 export function ResultOverlay({
   selectedText,
   selectionRect,
   action,
+  transformationId,
   onClose,
   onReplace,
   isEditable,
 }: ResultOverlayProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<RequestStatus>('idle');
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-
-  const { position, isVisible } = useOverlayPosition(selectionRect, overlayRef);
+  const [copied, setCopied] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const { isStreaming, fullText, cancel, reset } = useStreamingResponse({
     onToken: () => setStatus('streaming'),
@@ -52,6 +101,15 @@ export function ResultOverlay({
     }
   }, [fullText, isStreaming]);
 
+  // Open popover when action is set
+  useEffect(() => {
+    if (action && selectionRect) {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  }, [action, selectionRect]);
+
   // Start request when action changes
   useEffect(() => {
     if (!action || !selectedText) return;
@@ -60,6 +118,7 @@ export function ResultOverlay({
       setStatus('loading');
       setResult('');
       setError(null);
+      setCopied(false);
       reset();
 
       try {
@@ -71,7 +130,7 @@ export function ResultOverlay({
               type: 'TRANSLATE',
               payload: {
                 text: selectedText,
-                targetLanguage: 'English', // Could be configurable
+                targetLanguage: 'English',
               },
             });
             break;
@@ -94,11 +153,40 @@ export function ResultOverlay({
               },
             });
             break;
+
+          case 'transform':
+            if (!transformationId) {
+              setError('No transformation selected');
+              setStatus('error');
+              return;
+            }
+            response = await sendMessage({
+              type: 'TRANSFORM',
+              payload: {
+                text: selectedText,
+                transformationId,
+              },
+            });
+            break;
         }
 
         if (response?.success && response.data) {
-          const data = response.data as { result?: string; text?: string; correctedText?: string };
-          const resultText = data.result || data.text || data.correctedText || '';
+          const data = response.data as {
+            result?: string;
+            text?: string;
+            correctedText?: string;
+            transformedText?: string;
+            translatedText?: string;
+            improvedText?: string;
+          };
+          const resultText =
+            data.transformedText ||
+            data.translatedText ||
+            data.improvedText ||
+            data.correctedText ||
+            data.result ||
+            data.text ||
+            '';
           setResult(resultText);
           setStatus('complete');
         } else if (response && !response.success) {
@@ -112,11 +200,13 @@ export function ResultOverlay({
     };
 
     performAction();
-  }, [action, selectedText, reset]);
+  }, [action, selectedText, transformationId, reset]);
 
   const handleCopy = useCallback(async () => {
     if (result) {
       await navigator.clipboard.writeText(result);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   }, [result]);
 
@@ -131,110 +221,149 @@ export function ResultOverlay({
     if (isStreaming) {
       cancel();
     }
+    setIsOpen(false);
     onClose();
   }, [isStreaming, cancel, onClose]);
 
-  // Handle click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (overlayRef.current && !overlayRef.current.contains(e.target as Node)) {
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
         handleClose();
       }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [handleClose]);
+    },
+    [handleClose],
+  );
 
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && isOpen) {
         handleClose();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [handleClose]);
+  }, [handleClose, isOpen]);
 
   if (!action || !selectionRect) return null;
 
-  const actionLabels = {
-    translate: 'Translation',
-    improve: 'Improved',
-    grammar: 'Grammar Check',
+  const statusConfig = STATUS_CONFIG[status];
+  const StatusIcon = statusConfig.icon;
+
+  // Calculate anchor position based on selection
+  const anchorStyle: React.CSSProperties = {
+    position: 'fixed',
+    left: selectionRect.left + selectionRect.width / 2,
+    top: selectionRect.bottom + 4,
+    width: 1,
+    height: 1,
+    pointerEvents: 'none',
   };
 
   return (
-    <div
-      ref={overlayRef}
-      className={cn(
-        'fixed z-[2147483647] transition-all duration-200',
-        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
-      )}
-      style={
-        position
-          ? {
-              top: `${position.top}px`,
-              left: `${position.left}px`,
-              transformOrigin: position.transformOrigin,
-            }
-          : { visibility: 'hidden' }
-      }
-    >
-      <Card className="w-[380px] max-w-[90vw] shadow-xl border bg-background">
-        <div className="p-3 border-b flex items-center justify-between">
-          <Badge variant="secondary">{actionLabels[action]}</Badge>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+      {/* Virtual anchor positioned at selection */}
+      <PopoverAnchor asChild>
+        <div ref={anchorRef} style={anchorStyle} />
+      </PopoverAnchor>
+
+      <PopoverContent
+        className="w-[320px] max-w-[90vw] overflow-hidden p-0"
+        side="bottom"
+        align="center"
+        sideOffset={6}
+        collisionPadding={12}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        {/* Compact header with colored icon */}
+        <div className="flex items-center justify-between border-b px-2.5 py-2">
+          <div className="flex items-center gap-2">
+            {/* Colored background icon */}
+            <div
+              className={cn(
+                'flex size-6 shrink-0 items-center justify-center rounded-md',
+                statusConfig.bgClass,
+              )}
+            >
+              <StatusIcon
+                className={cn(
+                  'size-3.5',
+                  statusConfig.iconClass,
+                  statusConfig.animate && 'animate-spin',
+                )}
+              />
+            </div>
+            {/* Action label */}
+            <span className="text-xs font-medium">{ACTION_LABELS[action]}</span>
+          </div>
+          {/* Close button */}
           <button
             onClick={handleClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Close"
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M12 4L4 12M4 4l8 8" />
-            </svg>
+            <X className="size-3.5" />
           </button>
         </div>
 
-        <div className="p-4 min-h-[80px] max-h-[300px] overflow-y-auto">
+        {/* Content area */}
+        <div className="max-h-[240px] min-h-[48px] overflow-y-auto px-2.5 py-2">
           {status === 'loading' && (
-            <div className="flex items-center justify-center py-4">
-              <Spinner className="h-6 w-6 text-muted-foreground" />
+            <div className="flex items-center gap-2 py-3">
+              <Loader className="size-4 animate-spin text-blue-600 dark:text-blue-400" />
+              <span className="text-xs text-muted-foreground">Processing...</span>
             </div>
           )}
 
           {(status === 'streaming' || status === 'complete') && (
-            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            <div className="whitespace-pre-wrap text-xs leading-relaxed">
               {result}
               {status === 'streaming' && (
-                <span className="inline-block w-2 h-4 ml-0.5 bg-primary animate-pulse" />
+                <span className="ml-0.5 inline-block h-3 w-1 animate-pulse rounded-sm bg-blue-500" />
               )}
             </div>
           )}
 
           {status === 'error' && (
-            <div className="text-sm text-destructive">
-              <p className="font-medium">Error</p>
-              <p className="mt-1 text-muted-foreground">{error}</p>
+            <div className="flex items-start gap-2 rounded-md bg-red-100 p-2 dark:bg-red-900/20">
+              <XCircle className="mt-0.5 size-3.5 shrink-0 text-red-600 dark:text-red-400" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-red-700 dark:text-red-400">Error</p>
+                <p className="mt-0.5 text-xs text-red-600 dark:text-red-300">{error}</p>
+              </div>
             </div>
           )}
         </div>
 
+        {/* Compact footer with actions */}
         {status === 'complete' && result && (
-          <div className="p-3 border-t flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={handleCopy}>
-              Copy
+          <div className="flex items-center justify-end gap-1.5 border-t px-2.5 py-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              className={cn(
+                'h-7 gap-1 px-2 text-xs',
+                copied &&
+                  'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400',
+              )}
+            >
+              {copied ? (
+                <>
+                  <Check className="size-3" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <ClipboardCopy className="size-3" />
+                  Copy
+                </>
+              )}
             </Button>
             {isEditable && onReplace && (
-              <Button size="sm" onClick={handleReplace}>
+              <Button size="sm" onClick={handleReplace} className="h-7 gap-1 px-2 text-xs">
+                <Replace className="size-3" />
                 Replace
               </Button>
             )}
@@ -242,13 +371,19 @@ export function ResultOverlay({
         )}
 
         {status === 'streaming' && (
-          <div className="p-3 border-t flex justify-end">
-            <Button variant="outline" size="sm" onClick={() => cancel()}>
+          <div className="flex justify-end border-t px-2.5 py-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => cancel()}
+              className="h-7 gap-1 px-2 text-xs"
+            >
+              <X className="size-3" />
               Cancel
             </Button>
           </div>
         )}
-      </Card>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

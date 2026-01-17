@@ -26,8 +26,9 @@ export class OllamaAdapter implements LLMProvider {
   private abortController: AbortController | null = null;
 
   constructor(config: OllamaConfig) {
+    const host = `http://${config.host}:${config.port}`;
     this.client = new Ollama({
-      host: `http://${config.host}:${config.port}`,
+      host,
     });
   }
 
@@ -35,8 +36,9 @@ export class OllamaAdapter implements LLMProvider {
    * Update configuration (creates new client)
    */
   updateConfig(config: OllamaConfig): void {
+    const host = `http://${config.host}:${config.port}`;
     this.client = new Ollama({
-      host: `http://${config.host}:${config.port}`,
+      host,
     });
   }
 
@@ -62,9 +64,8 @@ export class OllamaAdapter implements LLMProvider {
       const models: ModelInfo[] = response.models.map((m) => ({
         name: m.name,
         size: formatBytes(m.size),
-        modifiedAt: m.modified_at instanceof Date
-          ? m.modified_at.toISOString()
-          : String(m.modified_at ?? ''),
+        modifiedAt:
+          m.modified_at instanceof Date ? m.modified_at.toISOString() : String(m.modified_at ?? ''),
       }));
       return createSuccess(models);
     } catch (error) {
@@ -90,12 +91,6 @@ export class OllamaAdapter implements LLMProvider {
           content: m.content,
         })),
         stream: false,
-        options: {
-          temperature: request.options?.temperature,
-          num_predict: request.options?.maxTokens,
-          top_p: request.options?.topP,
-          stop: request.options?.stop,
-        },
       });
 
       return createSuccess({

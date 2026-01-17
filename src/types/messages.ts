@@ -1,5 +1,7 @@
 // Extension Message Protocol Types
 
+import type { TransformPayload } from './transformations';
+
 // ===== Request Types (content script/popup -> background) =====
 
 export interface TranslatePayload {
@@ -35,7 +37,9 @@ export type ExtensionRequest =
   | { type: 'UPDATE_CONFIG'; payload: Partial<ExtensionConfig> }
   | { type: 'LIST_MODELS' }
   | { type: 'TEST_CONNECTION' }
-  | { type: 'CANCEL_REQUEST'; payload: { requestId: string } };
+  | { type: 'CANCEL_REQUEST'; payload: { requestId: string } }
+  | { type: 'TRANSFORM'; payload: TransformPayload }
+  | { type: 'REFRESH_CONTEXT_MENUS' };
 
 // ===== Response Types (background -> content script/popup) =====
 
@@ -90,7 +94,8 @@ export type StreamMessage =
 
 export interface ContextMenuAction {
   type: 'CONTEXT_MENU_ACTION';
-  action: 'translate' | 'improve' | 'grammar';
+  action: 'translate' | 'improve' | 'grammar' | 'transform';
+  transformationId?: string;  // For custom transformations
 }
 
 // ===== Configuration Types =====

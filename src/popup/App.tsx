@@ -1,19 +1,23 @@
-import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
-import { ConnectionStatus, ModelSelector, SettingsForm } from './components';
 import { useConfigStore } from '@/store/useConfigStore';
+import { useTransformationStore } from '@/store/useTransformationStore';
+
+import { useEffect, useState } from 'react';
+
+import { ConnectionStatus, ModelSelector, SettingsForm, TransformationList } from './components';
 
 export function App() {
   const [isHydrated, setIsHydrated] = useState(false);
-  const hasHydrated = useConfigStore((state) => state._hasHydrated);
+  const configHydrated = useConfigStore((state) => state._hasHydrated);
+  const transformationsHydrated = useTransformationStore((state) => state._hasHydrated);
 
   useEffect(() => {
-    if (hasHydrated) {
+    if (configHydrated && transformationsHydrated) {
       setIsHydrated(true);
     }
-  }, [hasHydrated]);
+  }, [configHydrated, transformationsHydrated]);
 
   // Wait for store hydration from chrome.storage
   if (!isHydrated) {
@@ -67,14 +71,19 @@ export function App() {
 
           <Separator />
 
+          {/* Transformations */}
+          <TransformationList />
+
+          <Separator />
+
           {/* Settings */}
           <SettingsForm />
         </div>
       </Card>
 
       {/* Footer */}
-      <p className="text-center text-xs text-muted-foreground mt-3">
-        Right-click selected text to use
+      <p className="mt-3 text-center text-xs text-muted-foreground">
+        Right-click selected text to use transformations
       </p>
     </div>
   );

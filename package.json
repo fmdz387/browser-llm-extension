@@ -1,9 +1,9 @@
 {
   "name": "browser-llm",
   "version": "1.0.0",
-  "description": "Chrome extension for local LLM-powered translation, writing assistance, and grammar checking",
+  "description": "Chrome extension for local LLM-powered in-page operations",
   "type": "module",
-  "packageManager": "pnpm@9.15.4",
+  "packageManager": "pnpm@10.22.0",
   "scripts": {
     "dev": "vite",
     "build": "node build.cjs",
@@ -20,6 +20,7 @@
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-select": "^2.1.4",
     "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slider": "^1.2.1",
@@ -28,7 +29,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.473.0",
+    "lucide-react": "^0.544.0",
     "ollama": "^0.6.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

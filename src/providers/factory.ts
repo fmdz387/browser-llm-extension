@@ -1,7 +1,6 @@
 // Provider Factory
-
-import type { LLMProvider, ProviderConfig, ProviderType } from './types';
 import { OllamaAdapter } from './adapters/ollama';
+import type { LLMProvider, ProviderConfig, ProviderType } from './types';
 
 /**
  * Singleton provider instance
@@ -46,7 +45,12 @@ export function getProvider(config?: ProviderConfig): LLMProvider {
     if (configChanged) {
       currentProvider = createProvider(config);
       currentConfig = config;
-    } else if (currentProvider && currentConfig && currentConfig.provider === 'ollama' && config.provider === 'ollama') {
+    } else if (
+      currentProvider &&
+      currentConfig &&
+      currentConfig.provider === 'ollama' &&
+      config.provider === 'ollama'
+    ) {
       // Update existing Ollama adapter config
       (currentProvider as OllamaAdapter).updateConfig({
         host: config.host,
@@ -88,18 +92,10 @@ function isSameConfig(a: ProviderConfig, b: ProviderConfig): boolean {
 
   switch (a.provider) {
     case 'ollama':
-      return (
-        b.provider === 'ollama' &&
-        a.host === b.host &&
-        a.port === b.port
-      );
+      return b.provider === 'ollama' && a.host === b.host && a.port === b.port;
 
     case 'openai':
-      return (
-        b.provider === 'openai' &&
-        a.apiKey === b.apiKey &&
-        a.baseUrl === b.baseUrl
-      );
+      return b.provider === 'openai' && a.apiKey === b.apiKey && a.baseUrl === b.baseUrl;
 
     case 'anthropic':
       return b.provider === 'anthropic' && a.apiKey === b.apiKey;

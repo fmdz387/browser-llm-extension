@@ -9,3 +9,5 @@ export { assistWriting, buildWritingPrompt, ACTION_LABELS, STYLE_LABELS } from '
 export type { WritingAction, WritingStyle, WritingRequest } from './WritingService';
 export { checkGrammar, buildGrammarPrompt } from './GrammarService';
 export type { GrammarRequest } from './GrammarService';
+export { transform, buildTransformPrompt } from './TransformationService';
+export type { TransformRequest } from './TransformationService';

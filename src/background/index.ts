@@ -4,10 +4,21 @@ import { handleMessage } from './messageHandler';
 // Register listeners synchronously at top level (Manifest V3 requirement)
 console.log('[Browser LLM] Service worker initializing...');
 
+// Storage key for transformations
+const TRANSFORMATIONS_STORAGE_KEY = 'browser-llm-transformations';
+
 // Register context menus on extension install/update
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[Browser LLM] Extension installed/updated');
   registerContextMenus();
+});
+
+// Listen for storage changes to update context menus when transformations change
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync' && changes[TRANSFORMATIONS_STORAGE_KEY]) {
+    console.log('[Browser LLM] Transformations changed, updating context menus...');
+    registerContextMenus();
+  }
 });
 
 // Context menu click handler
