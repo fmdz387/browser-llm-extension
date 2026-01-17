@@ -177,7 +177,7 @@ pnpm test
 
 ## Author
 
-[![X](https://img.shields.io/badge/X-@fmdz387-black?logo=x)](https://x.com/fmdz387)
+[![@fmdz387 on X](https://img.shields.io/badge/-@fmdz387-black?logo=x)](https://x.com/fmdz387)
 
 ## License
 
