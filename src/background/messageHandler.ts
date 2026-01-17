@@ -24,12 +24,15 @@ const DEFAULT_PROVIDER_CONFIG = {
 };
 
 interface StoredProviderConfig {
-  type: 'ollama' | 'openai' | 'anthropic';
+  type: 'ollama' | 'openai' | 'anthropic' | 'openrouter';
   host: string;
   port: number;
   model: string;
   temperature?: number;
   maxTokens?: number;
+  // OpenRouter-specific fields
+  apiKey?: string;
+  modelId?: string;
 }
 
 /**
@@ -68,14 +71,35 @@ export async function handleMessage(
   // Get provider config from storage and initialize provider with it
   const providerConfig = await getProviderConfig();
 
-  // Build ProviderConfig based on type (currently only Ollama is supported)
+  // Build ProviderConfig based on type
   let provider: LLMProvider;
-  if (providerConfig.type === 'ollama') {
+  let model: string | null = null;
+
+  if (providerConfig.type === 'openrouter') {
+    // OpenRouter uses modelId for the model selection
+    if (!providerConfig.apiKey || !providerConfig.modelId) {
+      // Return early if OpenRouter is not properly configured
+      provider = getProvider({
+        provider: 'ollama',
+        host: 'localhost',
+        port: 11434,
+      });
+    } else {
+      provider = getProvider({
+        provider: 'openrouter',
+        apiKey: providerConfig.apiKey,
+        modelId: providerConfig.modelId,
+      });
+      // For OpenRouter, the modelId is the model
+      model = providerConfig.modelId;
+    }
+  } else if (providerConfig.type === 'ollama') {
     provider = getProvider({
       provider: 'ollama',
       host: providerConfig.host,
       port: providerConfig.port,
     });
+    model = providerConfig.model || null;
   } else {
     // Fallback to default Ollama for unsupported providers
     provider = getProvider({
@@ -83,8 +107,8 @@ export async function handleMessage(
       host: providerConfig.host || 'localhost',
       port: providerConfig.port || 11434,
     });
+    model = providerConfig.model || null;
   }
-  const model = providerConfig.model || null;
 
   // Check if model is required for this action
   const requiresModel = ['TRANSLATE', 'WRITING_ASSIST', 'GRAMMAR_CHECK', 'TRANSFORM'].includes(
@@ -196,16 +220,22 @@ export async function handleMessage(
       case 'UPDATE_CONFIG': {
         const config = message.payload;
         if (config.provider) {
-          // Currently only Ollama is supported
-          // When other providers are added, handle their specific config fields
-          if (config.provider.type === 'ollama' || !config.provider.type) {
+          if (config.provider.type === 'openrouter') {
+            // Handle OpenRouter config
+            if (config.provider.apiKey && config.provider.modelId) {
+              updateProviderConfig({
+                provider: 'openrouter',
+                apiKey: config.provider.apiKey,
+                modelId: config.provider.modelId,
+              });
+            }
+          } else if (config.provider.type === 'ollama' || !config.provider.type) {
             updateProviderConfig({
               provider: 'ollama',
               host: config.provider.host ?? 'localhost',
               port: config.provider.port ?? 11434,
             });
           }
-          // TODO: Add OpenAI and Anthropic config handling when implemented
         }
         return { success: true, data: null };
       }

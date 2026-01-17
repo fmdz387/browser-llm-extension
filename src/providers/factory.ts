@@ -1,5 +1,6 @@
 // Provider Factory
 import { OllamaAdapter } from './adapters/ollama';
+import { OpenRouterAdapter } from './adapters/openrouter';
 import type { LLMProvider, ProviderConfig, ProviderType } from './types';
 
 /**
@@ -24,6 +25,12 @@ export function createProvider(config: ProviderConfig): LLMProvider {
 
     case 'anthropic':
       throw new Error('Anthropic provider not yet implemented');
+
+    case 'openrouter':
+      return new OpenRouterAdapter({
+        apiKey: config.apiKey,
+        modelId: config.modelId,
+      });
 
     default:
       throw new Error(`Unknown provider: ${(config as ProviderConfig).provider}`);
@@ -55,6 +62,18 @@ export function getProvider(config?: ProviderConfig): LLMProvider {
       (currentProvider as OllamaAdapter).updateConfig({
         host: config.host,
         port: config.port,
+      });
+      currentConfig = config;
+    } else if (
+      currentProvider &&
+      currentConfig &&
+      currentConfig.provider === 'openrouter' &&
+      config.provider === 'openrouter'
+    ) {
+      // Update existing OpenRouter adapter config
+      (currentProvider as OpenRouterAdapter).updateConfig({
+        apiKey: config.apiKey,
+        modelId: config.modelId,
       });
       currentConfig = config;
     }
@@ -99,6 +118,9 @@ function isSameConfig(a: ProviderConfig, b: ProviderConfig): boolean {
 
     case 'anthropic':
       return b.provider === 'anthropic' && a.apiKey === b.apiKey;
+
+    case 'openrouter':
+      return b.provider === 'openrouter' && a.apiKey === b.apiKey && a.modelId === b.modelId;
 
     default:
       return false;

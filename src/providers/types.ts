@@ -87,7 +87,8 @@ export type LLMResult<T> = { success: true; data: T } | { success: false; error:
 export type ProviderConfig =
   | { provider: 'ollama'; host: string; port: number }
   | { provider: 'openai'; apiKey: string; baseUrl?: string }
-  | { provider: 'anthropic'; apiKey: string };
+  | { provider: 'anthropic'; apiKey: string }
+  | { provider: 'openrouter'; apiKey: string; modelId: string };
 
 /**
  * Provider type identifier

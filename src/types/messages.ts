@@ -1,5 +1,4 @@
 // Extension Message Protocol Types
-
 import type { TransformPayload } from './transformations';
 
 // ===== Request Types (content script/popup -> background) =====
@@ -95,19 +94,22 @@ export type StreamMessage =
 export interface ContextMenuAction {
   type: 'CONTEXT_MENU_ACTION';
   action: 'translate' | 'improve' | 'grammar' | 'transform';
-  transformationId?: string;  // For custom transformations
+  transformationId?: string; // For custom transformations
 }
 
 // ===== Configuration Types =====
 
 export interface ExtensionConfig {
   provider: {
-    type: 'ollama' | 'openai' | 'anthropic';
+    type: 'ollama' | 'openai' | 'anthropic' | 'openrouter';
     host: string;
     port: number;
     model: string;
     temperature: number;
     maxTokens: number;
+    // OpenRouter-specific fields
+    apiKey?: string;
+    modelId?: string;
   };
   translation: {
     defaultTargetLanguage: string;

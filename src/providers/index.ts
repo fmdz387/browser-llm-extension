@@ -30,3 +30,4 @@ export { createError, createSuccess, handleFetchError, normalizeError } from './
 
 // Adapters
 export { OllamaAdapter } from './adapters/ollama';
+export { OpenRouterAdapter } from './adapters/openrouter';

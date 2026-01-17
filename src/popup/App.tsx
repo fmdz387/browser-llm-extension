@@ -24,7 +24,7 @@ export function App() {
     return (
       <div className="w-[360px] p-4">
         <Card className="p-4">
-          <div className="flex items-center justify-center h-32">
+          <div className="flex h-32 items-center justify-center">
             <Spinner className="h-6 w-6 text-muted-foreground" />
           </div>
         </Card>
@@ -33,12 +33,12 @@ export function App() {
   }
 
   return (
-    <div className="w-[360px] p-4 bg-background">
+    <div className="w-[360px] bg-background p-4">
       <Card className="p-4">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <svg
                 width="20"
                 height="20"

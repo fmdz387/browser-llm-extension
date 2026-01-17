@@ -1,6 +1,5 @@
 import { getTransformationsFromStorage } from '@/store/useTransformationStore';
 import type { ContextMenuAction } from '@/types/messages';
-import type { Transformation } from '@/types/transformations';
 import { sendToTab } from '@/utils/messaging';
 
 // Prefix for transformation menu item IDs

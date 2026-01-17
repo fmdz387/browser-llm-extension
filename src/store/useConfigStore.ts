@@ -1,12 +1,18 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { chromeStorageAdapter } from './middleware/chromeStorage';
 import type { ProviderType } from '@/providers';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+
+import { chromeStorageAdapter } from './middleware/chromeStorage';
 
 export interface ProviderConfig {
   type: ProviderType;
+  // Ollama settings
   host: string;
   port: number;
+  // API-based provider settings (OpenRouter)
+  apiKey: string;
+  modelId: string;
+  // Common settings
   model: string;
   temperature: number;
   maxTokens: number;
@@ -31,8 +37,13 @@ interface ConfigStore {
 
 const DEFAULT_PROVIDER: ProviderConfig = {
   type: 'ollama',
+  // Ollama settings
   host: 'localhost',
   port: 11434,
+  // API-based provider settings
+  apiKey: '',
+  modelId: '',
+  // Common settings
   model: '',
   temperature: 0.7,
   maxTokens: 2048,
@@ -51,6 +62,7 @@ export function getProviderDisplayName(type: ProviderType): string {
     ollama: 'Ollama',
     openai: 'OpenAI',
     anthropic: 'Anthropic',
+    openrouter: 'OpenRouter',
   };
   return displayNames[type] || type;
 }
@@ -123,6 +135,6 @@ export const useConfigStore = create<ConfigStore>()(
         return state;
       },
       version: 2,
-    }
-  )
+    },
+  ),
 );
