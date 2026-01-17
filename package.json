@@ -1,12 +1,14 @@
 {
   "name": "browser-llm",
   "version": "1.0.0",
-  "description": "Chrome extension for local LLM-powered in-page operations",
+  "description": "LLM-powered toolkit for your browser",
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.22.0",
   "scripts": {
     "dev": "vite",
     "build": "node build.cjs",
+    "build:prod": "node build.cjs --prod",
     "watch": "vite build --watch",
     "preview": "vite preview",
     "build:css": "tailwindcss -i ./src/styles/globals.css -o ./dist/popup.css",

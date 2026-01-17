@@ -37,25 +37,15 @@ export function App() {
       <Card className="p-4">
         <div className="space-y-4">
           {/* Header */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-primary-foreground"
-              >
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </div>
+          <div className="flex items-center gap-3">
+            <img
+              src={chrome.runtime.getURL('assets/512x512.png')}
+              alt="Browser LLM"
+              className="h-10 w-10 rounded-lg"
+            />
             <div>
               <h1 className="text-lg font-semibold">Browser LLM</h1>
-              <p className="text-xs text-muted-foreground">Local AI for your browser</p>
+              <p className="text-xs text-muted-foreground">Lightweight AI for your browser</p>
             </div>
           </div>
 
@@ -66,13 +56,13 @@ export function App() {
 
           <Separator />
 
-          {/* Transformations */}
-          <TransformationList />
+          {/* Settings */}
+          <SettingsForm />
 
           <Separator />
 
-          {/* Settings */}
-          <SettingsForm />
+          {/* Transformations */}
+          <TransformationList />
         </div>
       </Card>
 
