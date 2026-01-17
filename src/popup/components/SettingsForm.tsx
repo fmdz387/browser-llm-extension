@@ -1,4 +1,5 @@
 import { SimpleSelect } from '@/components/SimpleSelect';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -8,7 +9,7 @@ import type { ProviderType } from '@/providers';
 import { getProviderDisplayName, useConfigStore } from '@/store/useConfigStore';
 import { sendMessage } from '@/utils/messaging';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const PROVIDER_OPTIONS = [
   { value: 'ollama', label: getProviderDisplayName('ollama') },
@@ -16,15 +17,61 @@ const PROVIDER_OPTIONS = [
 ];
 
 export function SettingsForm() {
-  const { provider, features, setProviderConfig, setFeatureConfig } = useConfigStore();
+  const { provider, features, hasApiKey, setProviderConfig, setFeatureConfig, saveApiKey, clearApiKey } = useConfigStore();
 
-  // Sync provider config to background script when it changes
+  // Local state for API key input - never stored in plaintext in the store
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  // Sync provider config to background script when it changes (excluding API key)
   useEffect(() => {
     sendMessage({
       type: 'UPDATE_CONFIG',
       payload: { provider },
     });
   }, [provider]);
+
+  // Clear save status after 2 seconds
+  useEffect(() => {
+    if (saveStatus !== 'idle') {
+      const timer = setTimeout(() => setSaveStatus('idle'), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveStatus]);
+
+  const handleSaveApiKey = useCallback(async () => {
+    if (!apiKeyInput.trim()) return;
+
+    setIsSaving(true);
+    try {
+      await saveApiKey(apiKeyInput.trim());
+      setApiKeyInput(''); // Clear input after saving
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Failed to save API key:', error);
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [apiKeyInput, saveApiKey]);
+
+  const handleClearApiKey = useCallback(async () => {
+    try {
+      await clearApiKey();
+      setApiKeyInput('');
+      setSaveStatus('idle');
+    } catch (error) {
+      console.error('Failed to clear API key:', error);
+    }
+  }, [clearApiKey]);
+
+  // Handle Enter key in API key input
+  const handleApiKeyKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && apiKeyInput.trim()) {
+      handleSaveApiKey();
+    }
+  }, [apiKeyInput, handleSaveApiKey]);
 
   return (
     <div className="space-y-6">
@@ -71,13 +118,61 @@ export function SettingsForm() {
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="api-key">API Key</Label>
-              <Input
-                id="api-key"
-                type="password"
-                value={provider.apiKey}
-                onChange={(e) => setProviderConfig({ apiKey: e.target.value })}
-                placeholder="sk-or-..."
-              />
+              {hasApiKey ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="api-key-display"
+                      type="password"
+                      value="••••••••••••••••"
+                      disabled
+                      className="flex-1 bg-muted"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearApiKey}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    API key stored securely (encrypted)
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="api-key"
+                      type="password"
+                      value={apiKeyInput}
+                      onChange={(e) => setApiKeyInput(e.target.value)}
+                      onKeyDown={handleApiKeyKeyDown}
+                      placeholder="sk-or-..."
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleSaveApiKey}
+                      disabled={!apiKeyInput.trim() || isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                  {saveStatus === 'saved' && (
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      API key saved securely
+                    </p>
+                  )}
+                  {saveStatus === 'error' && (
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      Failed to save API key
+                    </p>
+                  )}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Get your API key from{' '}
                 <a

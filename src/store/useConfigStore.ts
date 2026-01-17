@@ -1,3 +1,10 @@
+import {
+  hasStoredApiKey,
+  loadDecryptedApiKey,
+  migrateFromPlaintextStorage,
+  saveEncryptedApiKey,
+  clearStoredApiKey,
+} from '@/lib/secureKeyStorage';
 import type { ProviderType } from '@/providers';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -29,10 +36,18 @@ interface ConfigStore {
   provider: ProviderConfig;
   features: FeaturesConfig;
   _hasHydrated: boolean;
+  // Secure API key state - the actual key is stored encrypted separately
+  hasApiKey: boolean;
   setProviderConfig: (config: Partial<ProviderConfig>) => void;
   setFeatureConfig: (config: Partial<FeaturesConfig>) => void;
   setHasHydrated: (state: boolean) => void;
   resetToDefaults: () => void;
+  // Secure API key methods
+  setHasApiKey: (hasKey: boolean) => void;
+  saveApiKey: (apiKey: string) => Promise<void>;
+  getApiKey: () => Promise<string | null>;
+  clearApiKey: () => Promise<void>;
+  initializeSecureStorage: () => Promise<void>;
 }
 
 const DEFAULT_PROVIDER: ProviderConfig = {
@@ -69,10 +84,11 @@ export function getProviderDisplayName(type: ProviderType): string {
 
 export const useConfigStore = create<ConfigStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       provider: DEFAULT_PROVIDER,
       features: DEFAULT_FEATURES,
       _hasHydrated: false,
+      hasApiKey: false,
 
       setProviderConfig: (config) =>
         set((state) => ({
@@ -91,6 +107,49 @@ export const useConfigStore = create<ConfigStore>()(
           provider: DEFAULT_PROVIDER,
           features: DEFAULT_FEATURES,
         }),
+
+      setHasApiKey: (hasKey) => set({ hasApiKey: hasKey }),
+
+      saveApiKey: async (apiKey: string) => {
+        await saveEncryptedApiKey(apiKey);
+        set({ hasApiKey: !!apiKey });
+        // Also update the in-memory provider state for immediate use
+        // (the actual key is stored encrypted, this is just for UI state)
+        set((state) => ({
+          provider: { ...state.provider, apiKey: apiKey ? '••••••••' : '' },
+        }));
+      },
+
+      getApiKey: async () => {
+        return loadDecryptedApiKey();
+      },
+
+      clearApiKey: async () => {
+        await clearStoredApiKey();
+        set({ hasApiKey: false });
+        set((state) => ({
+          provider: { ...state.provider, apiKey: '' },
+        }));
+      },
+
+      initializeSecureStorage: async () => {
+        // Run migration from plaintext storage
+        const migrated = await migrateFromPlaintextStorage();
+        if (migrated) {
+          console.log('[ConfigStore] Migrated API key to encrypted storage');
+        }
+
+        // Check if we have an encrypted API key
+        const hasKey = await hasStoredApiKey();
+        set({ hasApiKey: hasKey });
+
+        // Update UI state to show masked indicator if key exists
+        if (hasKey) {
+          set((state) => ({
+            provider: { ...state.provider, apiKey: '••••••••' },
+          }));
+        }
+      },
     }),
     {
       name: 'browser-llm-config',
@@ -101,6 +160,8 @@ export const useConfigStore = create<ConfigStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
+        // Initialize secure storage after hydration
+        state?.initializeSecureStorage();
       },
       // Handle migration from old 'ollama' key to 'provider'
       migrate: (persisted: unknown, _version: number) => {

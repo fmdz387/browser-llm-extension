@@ -1,9 +1,29 @@
 import type { StateStorage } from 'zustand/middleware';
 
 /**
+ * Sanitize state before storing to remove sensitive data
+ * API keys are stored separately using secureKeyStorage
+ */
+function sanitizeStateForStorage(value: string): string {
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed.state?.provider?.apiKey) {
+      // Remove API key from sync storage - it's stored encrypted separately
+      parsed.state.provider.apiKey = '';
+    }
+    return JSON.stringify(parsed);
+  } catch {
+    return value;
+  }
+}
+
+/**
  * Chrome Storage adapter for Zustand persist middleware.
  * Uses chrome.storage.sync for cross-device persistence.
  * Falls back to localStorage for development/non-extension contexts.
+ *
+ * Note: API keys are NOT stored here - they are stored encrypted in
+ * chrome.storage.local via secureKeyStorage.ts
  */
 export const chromeStorageAdapter: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
@@ -20,15 +40,18 @@ export const chromeStorageAdapter: StateStorage = {
   },
 
   setItem: async (name: string, value: string): Promise<void> => {
+    // Sanitize state to remove sensitive data before storing
+    const sanitizedValue = sanitizeStateForStorage(value);
+
     try {
       if (typeof chrome !== 'undefined' && chrome.storage?.sync) {
-        await chrome.storage.sync.set({ [name]: value });
+        await chrome.storage.sync.set({ [name]: sanitizedValue });
         return;
       }
     } catch {
       // Fall through to localStorage
     }
-    localStorage.setItem(name, value);
+    localStorage.setItem(name, sanitizedValue);
   },
 
   removeItem: async (name: string): Promise<void> => {

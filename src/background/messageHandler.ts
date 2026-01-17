@@ -1,3 +1,4 @@
+import { loadDecryptedApiKey, hasStoredApiKey } from '@/lib/secureKeyStorage';
 import { getProvider, updateProviderConfig } from '@/providers';
 import type { CompletionRequest, LLMProvider } from '@/providers';
 import { checkGrammar } from '@/services/GrammarService';
@@ -77,7 +78,11 @@ export async function handleMessage(
 
   if (providerConfig.type === 'openrouter') {
     // OpenRouter uses modelId for the model selection
-    if (!providerConfig.apiKey || !providerConfig.modelId) {
+    // Get API key from secure storage
+    const apiKey = await loadDecryptedApiKey();
+    const hasKey = await hasStoredApiKey();
+
+    if (!hasKey || !apiKey || !providerConfig.modelId) {
       // Return early if OpenRouter is not properly configured
       provider = getProvider({
         provider: 'ollama',
@@ -87,7 +92,7 @@ export async function handleMessage(
     } else {
       provider = getProvider({
         provider: 'openrouter',
-        apiKey: providerConfig.apiKey,
+        apiKey: apiKey,
         modelId: providerConfig.modelId,
       });
       // For OpenRouter, the modelId is the model
@@ -222,10 +227,12 @@ export async function handleMessage(
         if (config.provider) {
           if (config.provider.type === 'openrouter') {
             // Handle OpenRouter config
-            if (config.provider.apiKey && config.provider.modelId) {
+            // API key is retrieved from secure storage, not from message payload
+            const apiKey = await loadDecryptedApiKey();
+            if (apiKey && config.provider.modelId) {
               updateProviderConfig({
                 provider: 'openrouter',
-                apiKey: config.provider.apiKey,
+                apiKey: apiKey,
                 modelId: config.provider.modelId,
               });
             }
@@ -300,9 +307,9 @@ async function handleStreamGenerate(
       model: model ?? '',
       messages: system
         ? [
-            { role: 'system', content: system },
-            { role: 'user', content: prompt },
-          ]
+          { role: 'system', content: system },
+          { role: 'user', content: prompt },
+        ]
         : [{ role: 'user', content: prompt }],
     };
 

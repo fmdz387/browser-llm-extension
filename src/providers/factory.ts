@@ -1,4 +1,6 @@
 // Provider Factory
+import { loadDecryptedApiKey } from '@/lib/secureKeyStorage';
+
 import { OllamaAdapter } from './adapters/ollama';
 import { OpenRouterAdapter } from './adapters/openrouter';
 import type { LLMProvider, ProviderConfig, ProviderType } from './types';
@@ -133,4 +135,66 @@ function isSameConfig(a: ProviderConfig, b: ProviderConfig): boolean {
 export function resetProvider(): void {
   currentProvider = null;
   currentConfig = null;
+}
+
+/**
+ * Config types for getProviderWithSecureKey (API key retrieved from secure storage)
+ */
+type SecureProviderConfig =
+  | { provider: 'ollama'; host: string; port: number }
+  | { provider: 'openai'; baseUrl?: string }
+  | { provider: 'anthropic' }
+  | { provider: 'openrouter'; modelId: string };
+
+/**
+ * Get provider with secure API key retrieval
+ * For providers that require API keys, retrieves the decrypted key from secure storage
+ */
+export async function getProviderWithSecureKey(
+  baseConfig: SecureProviderConfig
+): Promise<LLMProvider> {
+  if (baseConfig.provider === 'openrouter') {
+    // Retrieve decrypted API key from secure storage
+    const apiKey = await loadDecryptedApiKey();
+
+    if (!apiKey) {
+      throw new Error('No API key configured for OpenRouter');
+    }
+
+    return getProvider({
+      provider: 'openrouter',
+      apiKey,
+      modelId: baseConfig.modelId,
+    });
+  }
+
+  if (baseConfig.provider === 'openai') {
+    const apiKey = await loadDecryptedApiKey();
+
+    if (!apiKey) {
+      throw new Error('No API key configured for OpenAI');
+    }
+
+    return getProvider({
+      provider: 'openai',
+      apiKey,
+      baseUrl: baseConfig.baseUrl,
+    });
+  }
+
+  if (baseConfig.provider === 'anthropic') {
+    const apiKey = await loadDecryptedApiKey();
+
+    if (!apiKey) {
+      throw new Error('No API key configured for Anthropic');
+    }
+
+    return getProvider({
+      provider: 'anthropic',
+      apiKey,
+    });
+  }
+
+  // For providers that don't need API keys (like Ollama)
+  return getProvider(baseConfig);
 }

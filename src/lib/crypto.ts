@@ -1,8 +1,10 @@
 // API Key Encryption Utilities using Web Crypto API
+// Note: For API key storage, prefer using secureKeyStorage.ts which uses
+// non-extractable CryptoKeys stored in IndexedDB for better security.
 
 const ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
-const PBKDF2_ITERATIONS = 100000;
+const PBKDF2_ITERATIONS = 600000;
 
 export interface EncryptedData {
   ciphertext: string; // base64 encoded
