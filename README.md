@@ -8,6 +8,15 @@ LLM-powered toolkit for your browser.
 
 A Chrome extension that brings AI-powered tools to any webpage. Currently featuring text transformations - select text, right-click, and transform it using your preferred AI provider.
 
+## Privacy
+
+**No backend server. No middleman. Direct API calls only.**
+
+All requests are made directly from your browser to your chosen LLM provider. There is no proxy server, no data collection, and no telemetry. Your API keys and data never pass through any third-party infrastructure.
+
+- **Ollama**: Requests stay entirely on your local machine
+- **OpenRouter/OpenAI/Anthropic**: Requests go directly from your browser to the provider's API
+
 ## Features
 
 ### Text Transformations
