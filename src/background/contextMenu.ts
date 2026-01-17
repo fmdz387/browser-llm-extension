@@ -8,58 +8,98 @@ const TRANSFORM_ID_PREFIX = 'browser-llm-transform-';
 // Maximum number of context menu items (Chrome has limits)
 const MAX_MENU_ITEMS = 50;
 
+// Mutex to prevent concurrent context menu registrations
+let registrationInProgress: Promise<void> | null = null;
+
+/**
+ * Promisified wrapper for chrome.contextMenus.removeAll
+ */
+function removeAllMenus(): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.contextMenus.removeAll(() => {
+      // Clear any lastError to prevent it from propagating
+      void chrome.runtime.lastError;
+      resolve();
+    });
+  });
+}
+
+/**
+ * Safely create a context menu item, ignoring duplicate ID errors
+ */
+function createMenuItem(props: chrome.contextMenus.CreateProperties): void {
+  chrome.contextMenus.create(props, () => {
+    // Suppress duplicate ID errors - can happen during rapid re-registration
+    void chrome.runtime.lastError;
+  });
+}
+
 /**
  * Register context menus dynamically from stored transformations
  */
 export async function registerContextMenus(): Promise<void> {
-  // Get enabled transformations from storage
-  const transformations = await getTransformationsFromStorage();
-  const enabledTransformations = transformations
-    .filter((t) => t.enabled)
-    .sort((a, b) => a.order - b.order)
-    .slice(0, MAX_MENU_ITEMS);
+  // Wait for any in-progress registration to complete first
+  if (registrationInProgress) {
+    await registrationInProgress;
+  }
 
-  // Remove all existing menus and recreate
-  chrome.contextMenus.removeAll(() => {
-    // Create parent menu
-    chrome.contextMenus.create({
-      id: 'browser-llm-parent',
-      title: 'Browser LLM',
-      contexts: ['selection'],
-    });
+  // Create new registration promise
+  registrationInProgress = (async () => {
+    try {
+      // Get enabled transformations from storage
+      const transformations = await getTransformationsFromStorage();
+      const enabledTransformations = transformations
+        .filter((t) => t.enabled)
+        .sort((a, b) => a.order - b.order)
+        .slice(0, MAX_MENU_ITEMS);
 
-    // Create menu items for each enabled transformation
-    for (const transformation of enabledTransformations) {
-      chrome.contextMenus.create({
-        id: `${TRANSFORM_ID_PREFIX}${transformation.id}`,
-        parentId: 'browser-llm-parent',
-        title: transformation.name,
+      // Remove all existing menus first
+      await removeAllMenus();
+
+      // Create parent menu
+      createMenuItem({
+        id: 'browser-llm-parent',
+        title: 'Browser LLM',
         contexts: ['selection'],
       });
-    }
 
-    // Add separator if there are transformations
-    if (enabledTransformations.length > 0) {
-      chrome.contextMenus.create({
-        id: 'browser-llm-separator',
+      // Create menu items for each enabled transformation
+      for (const transformation of enabledTransformations) {
+        createMenuItem({
+          id: `${TRANSFORM_ID_PREFIX}${transformation.id}`,
+          parentId: 'browser-llm-parent',
+          title: transformation.name,
+          contexts: ['selection'],
+        });
+      }
+
+      // Add separator if there are transformations
+      if (enabledTransformations.length > 0) {
+        createMenuItem({
+          id: 'browser-llm-separator',
+          parentId: 'browser-llm-parent',
+          type: 'separator',
+          contexts: ['selection'],
+        });
+      }
+
+      // Add "Manage Transformations..." link at bottom
+      createMenuItem({
+        id: 'browser-llm-manage',
         parentId: 'browser-llm-parent',
-        type: 'separator',
+        title: 'Manage Transformations...',
         contexts: ['selection'],
       });
+
+      console.log(
+        `[Browser LLM] Context menus registered with ${enabledTransformations.length} transformations`,
+      );
+    } finally {
+      registrationInProgress = null;
     }
+  })();
 
-    // Add "Manage Transformations..." link at bottom
-    chrome.contextMenus.create({
-      id: 'browser-llm-manage',
-      parentId: 'browser-llm-parent',
-      title: 'Manage Transformations...',
-      contexts: ['selection'],
-    });
-
-    console.log(
-      `[Browser LLM] Context menus registered with ${enabledTransformations.length} transformations`,
-    );
-  });
+  await registrationInProgress;
 }
 
 /**
