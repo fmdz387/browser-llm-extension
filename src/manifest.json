@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Browser LLM Assistant",
+  "version": "1.0.0",
+  "description": "Local LLM-powered translation, writing assistance, and grammar checking using Ollama",
+
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Browser LLM Settings"
+  }
+}

@@ -1,0 +1,148 @@
+
+# Dependencies
+
+node_modules/
+.pnpm-store/
+
+
+# Build outputs
+
+dist/
+dist-ssr/
+*.local
+
+
+# Environment variables
+
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+
+# Logs
+
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+
+# Editor & IDE
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+
+# OS generated files
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+
+# TypeScript
+
+*.tsbuildinfo
+
+
+# Testing
+
+coverage/
+.nyc_output/
+
+
+# Vite
+
+*.local
+
+
+# Chrome Extension specific
+
+# Packed extension files
+*.crx
+*.pem
+*.zip
+
+# Extension key file (sensitive)
+key.pem
+
+
+# Miscellaneous
+
+# Local Netlify folder
+.netlify/
+
+# Parcel cache
+.cache/
+.parcel-cache/
+
+# Turbo
+.turbo/
+
+# Vercel
+.vercel/
+
+# Debug
+debug/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Archive files (typically not needed in repo)
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+
+# AI/LLM Tools
+
+.claude/
