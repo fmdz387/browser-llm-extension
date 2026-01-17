@@ -94,7 +94,7 @@ export type StreamMessage =
 export interface ContextMenuAction {
   type: 'CONTEXT_MENU_ACTION';
   action: 'translate' | 'improve' | 'grammar' | 'transform';
-  transformationId?: string; // For custom transformations
+  transformationId?: string; // For custom transformations (title/description looked up from store)
 }
 
 // ===== Configuration Types =====

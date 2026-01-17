@@ -1,23 +1,34 @@
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useTransformationStore } from '@/store/useTransformationStore';
+import { useShortcutStore } from '@/store/useShortcutStore';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { ConnectionStatus, SettingsForm, TransformationList } from './components';
+import { ConnectionStatus, SettingsForm, ShortcutSettings, TransformationList } from './components';
 
 export function App() {
   const [isHydrated, setIsHydrated] = useState(false);
   const configHydrated = useConfigStore((state) => state._hasHydrated);
   const transformationsHydrated = useTransformationStore((state) => state._hasHydrated);
+  const shortcutsHydrated = useShortcutStore((state) => state._hasHydrated);
 
   useEffect(() => {
-    if (configHydrated && transformationsHydrated) {
+    if (configHydrated && transformationsHydrated && shortcutsHydrated) {
       setIsHydrated(true);
     }
-  }, [configHydrated, transformationsHydrated]);
+  }, [configHydrated, transformationsHydrated, shortcutsHydrated]);
+
+  const handleResetAll = useCallback(async () => {
+    if (!confirm('Reset all settings, transformations, and shortcuts to defaults?')) {
+      return;
+    }
+    await chrome.storage.sync.clear();
+    window.location.reload();
+  }, []);
 
   // Wait for store hydration from chrome.storage
   if (!isHydrated) {
@@ -63,12 +74,29 @@ export function App() {
 
           {/* Transformations */}
           <TransformationList />
+
+          <Separator />
+
+          {/* Keyboard Shortcuts */}
+          <ShortcutSettings />
+
+          <Separator />
+
+          {/* Reset */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-muted-foreground"
+            onClick={handleResetAll}
+          >
+            Reset All to Defaults
+          </Button>
         </div>
       </Card>
 
       {/* Footer */}
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Right-click selected text to use transformations
+        Right-click or use shortcuts on selected text
       </p>
     </div>
   );

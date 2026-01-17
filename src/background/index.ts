@@ -21,8 +21,10 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
 });
 
-// Context menu click handler
-chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
+// Context menu click handler (wrapped to handle async)
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  void handleContextMenuClick(info, tab);
+});
 
 // Message handler from content scripts and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

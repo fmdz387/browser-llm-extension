@@ -1,13 +1,23 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TRANSFORMATION_LIMITS } from '@/types/transformations';
 
 import { useState } from 'react';
+
+interface TransformationFormData {
+  name: string;
+  instructions: string;
+  title?: string;
+  description?: string;
+}
 
 interface TransformationFormProps {
   initialName?: string;
   initialInstructions?: string;
-  onSave: (name: string, instructions: string) => void;
+  initialTitle?: string;
+  initialDescription?: string;
+  onSave: (data: TransformationFormData) => void;
   onCancel: () => void;
   isEditing?: boolean;
 }
@@ -15,25 +25,42 @@ interface TransformationFormProps {
 export function TransformationForm({
   initialName = '',
   initialInstructions = '',
+  initialTitle = '',
+  initialDescription = '',
   onSave,
   onCancel,
   isEditing = false,
 }: TransformationFormProps) {
   const [name, setName] = useState(initialName);
   const [instructions, setInstructions] = useState(initialInstructions);
-  const [errors, setErrors] = useState<{ name?: string; instructions?: string }>({});
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
+  const [errors, setErrors] = useState<{
+    name?: string;
+    instructions?: string;
+    title?: string;
+    description?: string;
+  }>({});
 
   const validate = (): boolean => {
-    const newErrors: { name?: string; instructions?: string } = {};
+    const newErrors: typeof errors = {};
 
     if (!name.trim()) {
       newErrors.name = 'Name is required';
-    } else if (name.length > 50) {
-      newErrors.name = 'Name must be 50 characters or less';
+    } else if (name.length > TRANSFORMATION_LIMITS.NAME_MAX_LENGTH) {
+      newErrors.name = `Name must be ${TRANSFORMATION_LIMITS.NAME_MAX_LENGTH} characters or less`;
     }
 
     if (!instructions.trim()) {
       newErrors.instructions = 'Instructions are required';
+    }
+
+    if (title && title.length > TRANSFORMATION_LIMITS.TITLE_MAX_LENGTH) {
+      newErrors.title = `Title must be ${TRANSFORMATION_LIMITS.TITLE_MAX_LENGTH} characters or less`;
+    }
+
+    if (description && description.length > TRANSFORMATION_LIMITS.DESCRIPTION_MAX_LENGTH) {
+      newErrors.description = `Description must be ${TRANSFORMATION_LIMITS.DESCRIPTION_MAX_LENGTH} characters or less`;
     }
 
     setErrors(newErrors);
@@ -43,7 +70,12 @@ export function TransformationForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-      onSave(name.trim(), instructions.trim());
+      onSave({
+        name: name.trim(),
+        instructions: instructions.trim(),
+        title: title.trim() || undefined,
+        description: description.trim() || undefined,
+      });
     }
   };
 
@@ -56,9 +88,39 @@ export function TransformationForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g., Translate to Spanish"
-          maxLength={50}
+          maxLength={TRANSFORMATION_LIMITS.NAME_MAX_LENGTH}
         />
         {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor="transformation-title">
+            Popover Title <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="transformation-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g., Translation"
+            maxLength={TRANSFORMATION_LIMITS.TITLE_MAX_LENGTH}
+          />
+          {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="transformation-description">
+            Description <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="transformation-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g., Converting to Spanish"
+            maxLength={TRANSFORMATION_LIMITS.DESCRIPTION_MAX_LENGTH}
+          />
+          {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
+        </div>
       </div>
 
       <div className="space-y-2">

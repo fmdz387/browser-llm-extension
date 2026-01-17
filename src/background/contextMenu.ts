@@ -65,10 +65,10 @@ export async function registerContextMenus(): Promise<void> {
 /**
  * Handle context menu clicks
  */
-export function handleContextMenuClick(
+export async function handleContextMenuClick(
   info: chrome.contextMenus.OnClickData,
   tab: chrome.tabs.Tab | undefined,
-): void {
+): Promise<void> {
   if (!tab?.id) {
     console.warn('[Browser LLM] No tab ID for context menu action');
     return;
@@ -87,6 +87,7 @@ export function handleContextMenuClick(
   if (menuItemId.startsWith(TRANSFORM_ID_PREFIX)) {
     const transformationId = menuItemId.replace(TRANSFORM_ID_PREFIX, '');
 
+    // Content script looks up title/description from the transformation store
     const message: ContextMenuAction = {
       type: 'CONTEXT_MENU_ACTION',
       action: 'transform',

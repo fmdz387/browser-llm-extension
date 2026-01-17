@@ -20,8 +20,13 @@ export function TransformationList() {
   // Sort by order
   const sortedTransformations = [...transformations].sort((a, b) => a.order - b.order);
 
-  const handleAddNew = (name: string, instructions: string) => {
-    addTransformation(name, instructions);
+  const handleAddNew = (data: {
+    name: string;
+    instructions: string;
+    title?: string;
+    description?: string;
+  }) => {
+    addTransformation(data);
     setIsAdding(false);
   };
 

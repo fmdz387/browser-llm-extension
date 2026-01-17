@@ -16,6 +16,8 @@ interface ResultOverlayProps {
   selectionRect: DOMRect | null;
   action: ActionType | null;
   transformationId?: string | null;
+  transformationTitle?: string;
+  transformationDescription?: string;
   onClose: () => void;
 }
 
@@ -66,12 +68,17 @@ const ACTION_LABELS: Record<ActionType, string> = {
 interface HeaderProps {
   action: ActionType;
   status: RequestStatus;
+  title?: string;
+  description?: string;
   onClose: () => void;
 }
 
-function Header({ action, status, onClose }: HeaderProps) {
+function Header({ action, status, title, description, onClose }: HeaderProps) {
   const config = STATUS_CONFIG[status];
   const StatusIcon = config.icon;
+
+  // Use custom title if provided, otherwise fall back to action label
+  const displayTitle = title || ACTION_LABELS[action];
 
   return (
     <div className="flex items-center justify-between border-b px-3 py-2.5">
@@ -86,11 +93,16 @@ function Header({ action, status, onClose }: HeaderProps) {
             className={cn('size-4', config.iconClass, config.animate && 'animate-spin')}
           />
         </div>
-        <span className="text-sm font-medium">{ACTION_LABELS[action]}</span>
+        <div className="min-w-0 flex-1">
+          <span className="text-sm font-medium">{displayTitle}</span>
+          {description && (
+            <p className="truncate text-xs text-muted-foreground">{description}</p>
+          )}
+        </div>
       </div>
       <button
         onClick={onClose}
-        className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label="Close"
       >
         <X className="size-4" />
@@ -207,6 +219,8 @@ export function ResultOverlay({
   selectionRect,
   action,
   transformationId,
+  transformationTitle,
+  transformationDescription,
   onClose,
 }: ResultOverlayProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -317,7 +331,13 @@ export function ResultOverlay({
         collisionPadding={12}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <Header action={action} status={status} onClose={handleClose} />
+        <Header
+          action={action}
+          status={status}
+          title={transformationTitle}
+          description={transformationDescription}
+          onClose={handleClose}
+        />
         <Content status={status} result={result} error={error} />
         <Footer
           status={status}

@@ -24,8 +24,13 @@ export function TransformationItem({
   const [isEditing, setIsEditing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
-  const handleSave = (name: string, instructions: string) => {
-    onUpdate(transformation.id, { name, instructions });
+  const handleSave = (data: {
+    name: string;
+    instructions: string;
+    title?: string;
+    description?: string;
+  }) => {
+    onUpdate(transformation.id, data);
     setIsEditing(false);
   };
 
@@ -41,6 +46,8 @@ export function TransformationItem({
         <TransformationForm
           initialName={transformation.name}
           initialInstructions={transformation.instructions}
+          initialTitle={transformation.title}
+          initialDescription={transformation.description}
           onSave={handleSave}
           onCancel={() => setIsEditing(false)}
           isEditing

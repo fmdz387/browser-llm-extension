@@ -28,10 +28,18 @@ export function ConnectionStatus() {
     }
   };
 
-  // Test connection on mount
+  // Test connection on mount - only for Ollama
   useEffect(() => {
-    testConnection();
-  }, []);
+    if (providerType === 'ollama') {
+      testConnection();
+    }
+  }, [providerType]);
+
+  // Only show connection status for Ollama (local server)
+  // API-based providers don't need connection status display
+  if (providerType !== 'ollama') {
+    return null;
+  }
 
   const statusConfig = {
     disconnected: { label: 'Not Connected', variant: 'secondary' as const },

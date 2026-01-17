@@ -11,3 +11,13 @@ export { checkGrammar, buildGrammarPrompt } from './GrammarService';
 export type { GrammarRequest } from './GrammarService';
 export { transform, buildTransformPrompt } from './TransformationService';
 export type { TransformRequest } from './TransformationService';
+export {
+  parseShortcut,
+  eventToShortcutString,
+  matchesShortcut,
+  validateShortcut,
+  normalizeShortcutString,
+  formatShortcutForDisplay,
+  isModifierOnlyEvent,
+  getModifiersFromEvent,
+} from './ShortcutService';

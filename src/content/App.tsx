@@ -1,78 +1,70 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSelection } from '@/hooks';
+import { useEffect, useCallback } from 'react';
+import { useSelection, useKeyboardShortcuts, useTransformationAction } from '@/hooks';
+import type { KeyboardShortcut } from '@/types/shortcuts';
 import { ResultOverlay } from './ResultOverlay';
 
-type ActionType = 'translate' | 'improve' | 'grammar' | 'transform' | null;
-
 export function App() {
-  const { text, rect, hasSelection, clearSelection } = useSelection({
-    minLength: 3,
-  });
+  const { text, rect, hasSelection, clearSelection } = useSelection({ minLength: 3 });
+  const {
+    action,
+    transformationInfo,
+    frozenSelection,
+    triggerTransformation,
+    triggerBuiltinAction,
+    clearAction,
+  } = useTransformationAction();
 
-  const [action, setAction] = useState<ActionType>(null);
-  const [transformationId, setTransformationId] = useState<string | null>(null);
-  const [frozenSelection, setFrozenSelection] = useState<{
-    text: string;
-    rect: DOMRect | null;
-  } | null>(null);
+  // Handle keyboard shortcuts
+  const handleShortcut = useCallback(
+    (shortcut: KeyboardShortcut) => {
+      if (!hasSelection) return;
+      const selection = { text, rect };
 
-  // Listen for context menu actions from background script
+      if (shortcut.actionType === 'transformation') {
+        triggerTransformation(shortcut.actionId, selection);
+      } else if (shortcut.actionType === 'builtin') {
+        const builtinAction = shortcut.actionId as 'translate' | 'improve' | 'grammar';
+        triggerBuiltinAction(builtinAction, selection);
+      }
+    },
+    [hasSelection, text, rect, triggerTransformation, triggerBuiltinAction]
+  );
+
+  useKeyboardShortcuts({ onShortcutTriggered: handleShortcut });
+
+  // Handle context menu messages
   useEffect(() => {
-    const handleMessage = (message: {
-      type: string;
-      action?: string;
-      transformationId?: string;
-    }) => {
-      if (message.type === 'CONTEXT_MENU_ACTION' && hasSelection) {
-        // Handle transform action with transformationId
-        if (message.action === 'transform' && message.transformationId) {
-          setFrozenSelection({ text, rect });
-          setTransformationId(message.transformationId);
-          setAction('transform');
-          return;
-        }
+    const handleMessage = (message: { type: string; action?: string; transformationId?: string }) => {
+      if (message.type !== 'CONTEXT_MENU_ACTION' || !hasSelection) return;
+      const selection = { text, rect };
 
-        // Handle legacy actions (translate, improve, grammar)
-        const actionMap: Record<string, ActionType> = {
-          translate: 'translate',
-          improve: 'improve',
-          grammar: 'grammar',
-        };
-
-        const newAction = actionMap[message.action || ''];
-        if (newAction) {
-          setFrozenSelection({ text, rect });
-          setTransformationId(null);
-          setAction(newAction);
-        }
+      if (message.action === 'transform' && message.transformationId) {
+        triggerTransformation(message.transformationId, selection);
+      } else if (message.action === 'translate' || message.action === 'improve' || message.action === 'grammar') {
+        triggerBuiltinAction(message.action, selection);
       }
     };
 
     chrome.runtime.onMessage.addListener(handleMessage);
     return () => chrome.runtime.onMessage.removeListener(handleMessage);
-  }, [hasSelection, text, rect]);
+  }, [hasSelection, text, rect, triggerTransformation, triggerBuiltinAction]);
 
   const handleClose = useCallback(() => {
-    setAction(null);
-    setTransformationId(null);
-    setFrozenSelection(null);
+    clearAction();
     clearSelection();
-  }, [clearSelection]);
+  }, [clearAction, clearSelection]);
 
-  // Use frozen selection when action is active, otherwise use live selection
-  const activeSelection = action && frozenSelection ? frozenSelection : null;
+  if (!action || !frozenSelection) return null;
 
   return (
-    <>
-      {activeSelection && (
-        <ResultOverlay
-          selectedText={activeSelection.text}
-          selectionRect={activeSelection.rect}
-          action={action}
-          transformationId={transformationId}
-          onClose={handleClose}
-        />
-      )}
-    </>
+    <ResultOverlay
+      selectedText={frozenSelection.text}
+      selectionRect={frozenSelection.rect}
+      action={action}
+      transformationId={transformationInfo?.id}
+      transformationTitle={transformationInfo?.title}
+      transformationDescription={transformationInfo?.description}
+      onClose={handleClose}
+    />
   );
 }

@@ -101,7 +101,12 @@ export function SettingsForm() {
       // Don't clear the model yet - wait for user to enter custom ID
     } else {
       setShowCustomModelInput(false);
-      setProviderConfig({ model: value });
+      // For OpenRouter, also set modelId since backend uses it
+      if (provider.type === 'openrouter') {
+        setProviderConfig({ model: value, modelId: value });
+      } else {
+        setProviderConfig({ model: value });
+      }
     }
   }, [provider.type, setProviderConfig]);
 
