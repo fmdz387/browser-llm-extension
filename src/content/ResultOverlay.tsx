@@ -4,7 +4,7 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { useCopyToClipboard, useStreamingResponse } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { sendMessage } from '@/utils/messaging';
-import { Check, Loader, Replace, Sparkles, X, XCircle } from 'lucide-react';
+import { Check, Loader, Sparkles, X, XCircle } from 'lucide-react';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -17,8 +17,6 @@ interface ResultOverlayProps {
   action: ActionType | null;
   transformationId?: string | null;
   onClose: () => void;
-  onReplace?: (text: string) => void;
-  isEditable: boolean;
 }
 
 interface StatusConfig {
@@ -140,33 +138,21 @@ interface FooterProps {
   status: RequestStatus;
   result: string;
   copied: boolean;
-  isEditable: boolean;
   onCopy: () => void;
-  onReplace: () => void;
   onCancel: () => void;
-  showReplace: boolean;
 }
 
 function Footer({
   status,
   result,
   copied,
-  isEditable,
   onCopy,
-  onReplace,
   onCancel,
-  showReplace,
 }: FooterProps) {
   if (status === 'complete' && result) {
     return (
-      <div className="flex items-center justify-end gap-1.5 border-t px-3 py-2">
+      <div className="flex items-center justify-end border-t px-3 py-2">
         <CopyButton text={result} copied={copied} onCopy={onCopy} />
-        {isEditable && showReplace && (
-          <Button size="sm" onClick={onReplace} className="h-8 gap-1.5 px-3 text-sm">
-            <Replace className="size-3.5" />
-            Replace
-          </Button>
-        )}
       </div>
     );
   }
@@ -222,8 +208,6 @@ export function ResultOverlay({
   action,
   transformationId,
   onClose,
-  onReplace,
-  isEditable,
 }: ResultOverlayProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<RequestStatus>('idle');
@@ -295,13 +279,6 @@ export function ResultOverlay({
     copy(result);
   }, [copy, result]);
 
-  const handleReplace = useCallback(() => {
-    if (result && onReplace) {
-      onReplace(result);
-      onClose();
-    }
-  }, [result, onReplace, onClose]);
-
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (!open) handleClose();
@@ -346,11 +323,8 @@ export function ResultOverlay({
           status={status}
           result={result}
           copied={copied}
-          isEditable={isEditable}
           onCopy={handleCopy}
-          onReplace={handleReplace}
           onCancel={cancel}
-          showReplace={Boolean(onReplace)}
         />
       </PopoverContent>
     </Popover>

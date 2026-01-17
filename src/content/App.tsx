@@ -5,7 +5,7 @@ import { ResultOverlay } from './ResultOverlay';
 type ActionType = 'translate' | 'improve' | 'grammar' | 'transform' | null;
 
 export function App() {
-  const { text, rect, isEditable, element, hasSelection, clearSelection } = useSelection({
+  const { text, rect, hasSelection, clearSelection } = useSelection({
     minLength: 3,
   });
 
@@ -14,8 +14,6 @@ export function App() {
   const [frozenSelection, setFrozenSelection] = useState<{
     text: string;
     rect: DOMRect | null;
-    isEditable: boolean;
-    element: HTMLElement | null;
   } | null>(null);
 
   // Listen for context menu actions from background script
@@ -28,12 +26,7 @@ export function App() {
       if (message.type === 'CONTEXT_MENU_ACTION' && hasSelection) {
         // Handle transform action with transformationId
         if (message.action === 'transform' && message.transformationId) {
-          setFrozenSelection({
-            text,
-            rect,
-            isEditable,
-            element,
-          });
+          setFrozenSelection({ text, rect });
           setTransformationId(message.transformationId);
           setAction('transform');
           return;
@@ -48,13 +41,7 @@ export function App() {
 
         const newAction = actionMap[message.action || ''];
         if (newAction) {
-          // Freeze the current selection
-          setFrozenSelection({
-            text,
-            rect,
-            isEditable,
-            element,
-          });
+          setFrozenSelection({ text, rect });
           setTransformationId(null);
           setAction(newAction);
         }
@@ -63,7 +50,7 @@ export function App() {
 
     chrome.runtime.onMessage.addListener(handleMessage);
     return () => chrome.runtime.onMessage.removeListener(handleMessage);
-  }, [hasSelection, text, rect, isEditable, element]);
+  }, [hasSelection, text, rect]);
 
   const handleClose = useCallback(() => {
     setAction(null);
@@ -71,42 +58,6 @@ export function App() {
     setFrozenSelection(null);
     clearSelection();
   }, [clearSelection]);
-
-  const handleReplace = useCallback(
-    (newText: string) => {
-      const targetElement = frozenSelection?.element;
-
-      if (!targetElement) return;
-
-      // Handle different element types
-      if (
-        targetElement.tagName === 'INPUT' ||
-        targetElement.tagName === 'TEXTAREA'
-      ) {
-        const input = targetElement as HTMLInputElement | HTMLTextAreaElement;
-        const start = input.selectionStart ?? 0;
-        const end = input.selectionEnd ?? 0;
-        const value = input.value;
-
-        input.value = value.slice(0, start) + newText + value.slice(end);
-
-        // Trigger input event for frameworks that listen to it
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      } else if (targetElement.isContentEditable) {
-        // For contenteditable elements
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          range.deleteContents();
-          range.insertNode(document.createTextNode(newText));
-        } else {
-          // Fallback: use execCommand
-          document.execCommand('insertText', false, newText);
-        }
-      }
-    },
-    [frozenSelection]
-  );
 
   // Use frozen selection when action is active, otherwise use live selection
   const activeSelection = action && frozenSelection ? frozenSelection : null;
@@ -120,8 +71,6 @@ export function App() {
           action={action}
           transformationId={transformationId}
           onClose={handleClose}
-          onReplace={activeSelection.isEditable ? handleReplace : undefined}
-          isEditable={activeSelection.isEditable}
         />
       )}
     </>
