@@ -1,5 +1,9 @@
 # Browser LLM
 
+<p align="center">
+  <img src="assets/512x512.png" alt="Browser LLM" width="128" height="128">
+</p>
+
 LLM-powered toolkit for your browser.
 
 A Chrome extension that brings AI-powered tools to any webpage. Currently featuring text transformations - select text, right-click, and transform it using your preferred AI provider.
