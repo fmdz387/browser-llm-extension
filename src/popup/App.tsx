@@ -6,7 +6,7 @@ import { useTransformationStore } from '@/store/useTransformationStore';
 
 import { useEffect, useState } from 'react';
 
-import { ConnectionStatus, ModelSelector, SettingsForm, TransformationList } from './components';
+import { ConnectionStatus, SettingsForm, TransformationList } from './components';
 
 export function App() {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -63,11 +63,6 @@ export function App() {
 
           {/* Connection Status */}
           <ConnectionStatus />
-
-          <Separator />
-
-          {/* Model Selector */}
-          <ModelSelector />
 
           <Separator />
 

@@ -9,7 +9,7 @@
  * - API keys are encrypted at rest
  * - Decrypted keys are cached in session storage (cleared on browser close)
  *
- * Limitation: Cannot protect against code running in extension context
+ * LIMITATION: Cannot protect against code running in extension context
  */
 
 const DB_NAME = 'browser-llm-secure-storage';
@@ -25,8 +25,6 @@ export interface EncryptedData {
   iv: string; // base64 encoded
   version: number; // for future migration support
 }
-
-// ===== IndexedDB Helpers =====
 
 /**
  * Open the IndexedDB database

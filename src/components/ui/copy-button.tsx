@@ -17,10 +17,10 @@ export function CopyButton({ text, copied, onCopy, className }: CopyButtonProps)
       size="sm"
       onClick={onCopy}
       disabled={!text}
-      className={cn('size-7 shrink-0 p-0', className)}
+      className={cn('size-8 shrink-0 p-0', className)}
       aria-label={copied ? 'Copied' : 'Copy to clipboard'}
     >
-      {copied ? <Check className="size-3.5 text-green-600" /> : <Copy className="size-3.5" />}
+      {copied ? <Check className="size-4 text-green-600" /> : <Copy className="size-4" />}
     </Button>
   );
 }

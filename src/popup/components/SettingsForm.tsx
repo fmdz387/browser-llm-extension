@@ -1,12 +1,14 @@
-import { SimpleSelect } from '@/components/SimpleSelect';
+import { SimpleSelect, SelectOption } from '@/components/SimpleSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import { OPENROUTER_DEFAULT_MODELS, CUSTOM_MODEL_VALUE } from '@/constants/models';
 import type { ProviderType } from '@/providers';
 import { getProviderDisplayName, useConfigStore } from '@/store/useConfigStore';
+import type { AvailableModel } from '@/types/messages';
 import { sendMessage } from '@/utils/messaging';
 
 import { useCallback, useEffect, useState } from 'react';
@@ -24,6 +26,13 @@ export function SettingsForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
 
+  // Model selection state
+  const [ollamaModels, setOllamaModels] = useState<AvailableModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+  const [showCustomModelInput, setShowCustomModelInput] = useState(false);
+  const [customModelId, setCustomModelId] = useState(provider.modelId || '');
+
   // Sync provider config to background script when it changes (excluding API key)
   useEffect(() => {
     sendMessage({
@@ -39,6 +48,68 @@ export function SettingsForm() {
       return () => clearTimeout(timer);
     }
   }, [saveStatus]);
+
+  // Fetch Ollama models when provider type is ollama
+  const fetchOllamaModels = useCallback(async () => {
+    if (provider.type !== 'ollama') return;
+
+    setModelsLoading(true);
+    setModelsError(null);
+
+    try {
+      const response = await sendMessage({ type: 'LIST_MODELS' });
+
+      if (response.success && response.data) {
+        const data = response.data as { models: AvailableModel[] };
+        setOllamaModels(data.models);
+
+        // Set default model if none selected
+        if (!provider.model && data.models.length > 0) {
+          setProviderConfig({ model: data.models[0].name });
+        }
+      } else if (!response.success) {
+        setModelsError(response.error.message);
+      }
+    } catch (err) {
+      setModelsError(err instanceof Error ? err.message : 'Failed to fetch models');
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [provider.type, provider.model, setProviderConfig]);
+
+  useEffect(() => {
+    if (provider.type === 'ollama') {
+      fetchOllamaModels();
+    }
+  }, [provider.type, fetchOllamaModels]);
+
+  // Check if current OpenRouter model is a custom model (not in defaults)
+  useEffect(() => {
+    if (provider.type === 'openrouter') {
+      const isDefaultModel = OPENROUTER_DEFAULT_MODELS.some(m => m.id === provider.model);
+      if (provider.model && !isDefaultModel) {
+        setShowCustomModelInput(true);
+        setCustomModelId(provider.model);
+      }
+    }
+  }, [provider.type, provider.model]);
+
+  // Handle model selection
+  const handleModelChange = useCallback((value: string) => {
+    if (provider.type === 'openrouter' && value === CUSTOM_MODEL_VALUE) {
+      setShowCustomModelInput(true);
+      // Don't clear the model yet - wait for user to enter custom ID
+    } else {
+      setShowCustomModelInput(false);
+      setProviderConfig({ model: value });
+    }
+  }, [provider.type, setProviderConfig]);
+
+  // Handle custom model ID change
+  const handleCustomModelIdChange = useCallback((value: string) => {
+    setCustomModelId(value);
+    setProviderConfig({ model: value, modelId: value });
+  }, [setProviderConfig]);
 
   const handleSaveApiKey = useCallback(async () => {
     if (!apiKeyInput.trim()) return;
@@ -73,11 +144,46 @@ export function SettingsForm() {
     }
   }, [apiKeyInput, handleSaveApiKey]);
 
+  // Build model options based on provider type
+  const getModelOptions = (): SelectOption[] => {
+    if (provider.type === 'ollama') {
+      return ollamaModels.map((model) => ({
+        value: model.name,
+        label: model.name,
+        description: model.size,
+      }));
+    }
+
+    if (provider.type === 'openrouter') {
+      const options: SelectOption[] = OPENROUTER_DEFAULT_MODELS.map((model) => ({
+        value: model.id,
+        label: model.displayName,
+        description: model.description,
+      }));
+      options.push({
+        value: CUSTOM_MODEL_VALUE,
+        label: 'Custom model...',
+        description: 'Enter a custom model ID',
+      });
+      return options;
+    }
+
+    return [];
+  };
+
+  // Get current model value for the dropdown
+  const getCurrentModelValue = (): string => {
+    if (provider.type === 'openrouter' && showCustomModelInput) {
+      return CUSTOM_MODEL_VALUE;
+    }
+    return provider.model;
+  };
+
   return (
     <div className="space-y-6">
-      {/* Provider Selection */}
+      {/* Provider & Model Selection */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold">Provider</h3>
+        <h3 className="text-sm font-semibold">Provider & Model</h3>
 
         <SimpleSelect
           label="Provider"
@@ -86,6 +192,46 @@ export function SettingsForm() {
           value={provider.type}
           onChange={(value) => setProviderConfig({ type: value as ProviderType })}
         />
+
+        {/* Model Selection - Provider-aware */}
+        <SimpleSelect
+          label="Model"
+          placeholder="Select a model"
+          options={getModelOptions()}
+          value={getCurrentModelValue()}
+          onChange={handleModelChange}
+          loading={provider.type === 'ollama' && modelsLoading}
+          error={provider.type === 'ollama' ? modelsError || undefined : undefined}
+          description={
+            provider.type === 'ollama' && ollamaModels.length === 0 && !modelsLoading && !modelsError
+              ? 'No models found. Make sure Ollama is running.'
+              : undefined
+          }
+        />
+
+        {/* Custom model input for OpenRouter */}
+        {provider.type === 'openrouter' && showCustomModelInput && (
+          <div className="space-y-2">
+            <Label htmlFor="custom-model-id">Custom Model ID</Label>
+            <Input
+              id="custom-model-id"
+              value={customModelId}
+              onChange={(e) => handleCustomModelIdChange(e.target.value)}
+              placeholder="e.g., openai/gpt-4o"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter the full model ID from{' '}
+              <a
+                href="https://openrouter.ai/models"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                openrouter.ai/models
+              </a>
+            </p>
+          </div>
+        )}
 
         {/* Ollama-specific settings */}
         {provider.type === 'ollama' && (
@@ -115,89 +261,74 @@ export function SettingsForm() {
 
         {/* OpenRouter-specific settings */}
         {provider.type === 'openrouter' && (
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="api-key">API Key</Label>
-              {hasApiKey ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="api-key-display"
-                      type="password"
-                      value="••••••••••••••••"
-                      disabled
-                      className="flex-1 bg-muted"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleClearApiKey}
-                    >
-                      Clear
-                    </Button>
-                  </div>
+          <div className="space-y-2">
+            <Label htmlFor="api-key">API Key</Label>
+            {hasApiKey ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="api-key-display"
+                    type="password"
+                    value="••••••••••••••••"
+                    disabled
+                    className="flex-1 bg-muted"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearApiKey}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  API key stored securely (encrypted)
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="api-key"
+                    type="password"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    onKeyDown={handleApiKeyKeyDown}
+                    placeholder="sk-or-..."
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleSaveApiKey}
+                    disabled={!apiKeyInput.trim() || isSaving}
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+                {saveStatus === 'saved' && (
                   <p className="text-xs text-green-600 dark:text-green-400">
-                    API key stored securely (encrypted)
+                    API key saved securely
                   </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="api-key"
-                      type="password"
-                      value={apiKeyInput}
-                      onChange={(e) => setApiKeyInput(e.target.value)}
-                      onKeyDown={handleApiKeyKeyDown}
-                      placeholder="sk-or-..."
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleSaveApiKey}
-                      disabled={!apiKeyInput.trim() || isSaving}
-                    >
-                      {isSaving ? 'Saving...' : 'Save'}
-                    </Button>
-                  </div>
-                  {saveStatus === 'saved' && (
-                    <p className="text-xs text-green-600 dark:text-green-400">
-                      API key saved securely
-                    </p>
-                  )}
-                  {saveStatus === 'error' && (
-                    <p className="text-xs text-red-600 dark:text-red-400">
-                      Failed to save API key
-                    </p>
-                  )}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Get your API key from{' '}
-                <a
-                  href="https://openrouter.ai/keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  openrouter.ai/keys
-                </a>
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="model-id">Model ID</Label>
-              <Input
-                id="model-id"
-                value={provider.modelId}
-                onChange={(e) => setProviderConfig({ modelId: e.target.value })}
-                placeholder="openai/gpt-4o-mini"
-              />
-              <p className="text-xs text-muted-foreground">
-                e.g., openai/gpt-4o, anthropic/claude-3.5-sonnet
-              </p>
-            </div>
+                )}
+                {saveStatus === 'error' && (
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    Failed to save API key
+                  </p>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Get your API key from{' '}
+              <a
+                href="https://openrouter.ai/keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                openrouter.ai/keys
+              </a>
+            </p>
           </div>
         )}
       </div>

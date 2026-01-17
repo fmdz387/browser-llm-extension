@@ -76,26 +76,26 @@ function Header({ action, status, onClose }: HeaderProps) {
   const StatusIcon = config.icon;
 
   return (
-    <div className="flex items-center justify-between border-b px-2.5 py-2">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between border-b px-3 py-2.5">
+      <div className="flex items-center gap-2.5">
         <div
           className={cn(
-            'flex size-6 shrink-0 items-center justify-center rounded-md',
+            'flex size-7 shrink-0 items-center justify-center rounded-md',
             config.bgClass,
           )}
         >
           <StatusIcon
-            className={cn('size-3.5', config.iconClass, config.animate && 'animate-spin')}
+            className={cn('size-4', config.iconClass, config.animate && 'animate-spin')}
           />
         </div>
-        <span className="text-xs font-medium">{ACTION_LABELS[action]}</span>
+        <span className="text-sm font-medium">{ACTION_LABELS[action]}</span>
       </div>
       <button
         onClick={onClose}
-        className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label="Close"
       >
-        <X className="size-3.5" />
+        <X className="size-4" />
       </button>
     </div>
   );
@@ -109,29 +109,26 @@ interface ContentProps {
 
 function Content({ status, result, error }: ContentProps) {
   return (
-    <div className="max-h-[240px] min-h-[48px] overflow-y-auto px-2.5 py-2">
+    <div className="max-h-[280px] min-h-[56px] overflow-y-auto px-3 py-3">
       {status === 'loading' && (
-        <div className="flex items-center gap-2 py-3">
-          <Loader className="size-4 animate-spin text-blue-600 dark:text-blue-400" />
-          <span className="text-xs text-muted-foreground">Processing...</span>
-        </div>
+        <p className="py-2 text-sm text-muted-foreground">Processing your request...</p>
       )}
 
       {(status === 'streaming' || status === 'complete') && (
-        <div className="whitespace-pre-wrap text-xs leading-relaxed">
+        <div className="whitespace-pre-wrap text-sm leading-relaxed">
           {result}
           {status === 'streaming' && (
-            <span className="ml-0.5 inline-block h-3 w-1 animate-pulse rounded-sm bg-blue-500" />
+            <span className="ml-0.5 inline-block h-4 w-1 animate-pulse rounded-sm bg-blue-500" />
           )}
         </div>
       )}
 
       {status === 'error' && (
-        <div className="flex items-start gap-2 rounded-md bg-red-100 p-2 dark:bg-red-900/20">
-          <XCircle className="mt-0.5 size-3.5 shrink-0 text-red-600 dark:text-red-400" />
+        <div className="flex items-start gap-2.5 rounded-md bg-red-100 p-2.5 dark:bg-red-900/20">
+          <XCircle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
           <div className="min-w-0">
-            <p className="text-xs font-medium text-red-700 dark:text-red-400">Error</p>
-            <p className="mt-0.5 text-xs text-red-600 dark:text-red-300">{error}</p>
+            <p className="text-sm font-medium text-red-700 dark:text-red-400">Error</p>
+            <p className="mt-0.5 text-sm text-red-600 dark:text-red-300">{error}</p>
           </div>
         </div>
       )}
@@ -162,11 +159,11 @@ function Footer({
 }: FooterProps) {
   if (status === 'complete' && result) {
     return (
-      <div className="flex items-center justify-end gap-1 border-t px-2.5 py-1.5">
+      <div className="flex items-center justify-end gap-1.5 border-t px-3 py-2">
         <CopyButton text={result} copied={copied} onCopy={onCopy} />
         {isEditable && showReplace && (
-          <Button size="sm" onClick={onReplace} className="h-7 gap-1 px-2 text-xs">
-            <Replace className="size-3" />
+          <Button size="sm" onClick={onReplace} className="h-8 gap-1.5 px-3 text-sm">
+            <Replace className="size-3.5" />
             Replace
           </Button>
         )}
@@ -176,9 +173,9 @@ function Footer({
 
   if (status === 'streaming') {
     return (
-      <div className="flex justify-end border-t px-2.5 py-1.5">
-        <Button variant="ghost" size="sm" onClick={onCancel} className="h-7 gap-1 px-2 text-xs">
-          <X className="size-3" />
+      <div className="flex justify-end border-t px-3 py-2">
+        <Button variant="ghost" size="sm" onClick={onCancel} className="h-8 gap-1.5 px-3 text-sm">
+          <X className="size-3.5" />
           Cancel
         </Button>
       </div>
@@ -336,10 +333,10 @@ export function ResultOverlay({
       </PopoverAnchor>
 
       <PopoverContent
-        className="w-[320px] max-w-[90vw] overflow-hidden p-0"
+        className="w-[360px] max-w-[90vw] overflow-hidden p-0"
         side="bottom"
         align="center"
-        sideOffset={6}
+        sideOffset={8}
         collisionPadding={12}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
