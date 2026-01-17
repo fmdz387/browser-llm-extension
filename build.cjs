@@ -8,8 +8,13 @@ const execPromise = util.promisify(exec);
 
 async function buildCss() {
   try {
+    // Build popup CSS
     await execPromise('pnpm tailwindcss -i ./src/styles/globals.css -o ./dist/popup.css');
-    console.log('CSS built successfully');
+    console.log('Popup CSS built successfully');
+
+    // Build content script CSS (for shadow DOM)
+    await execPromise('pnpm tailwindcss -i ./src/styles/content.css -o ./dist/content.css');
+    console.log('Content CSS built successfully');
   } catch (e) {
     console.error('CSS build failed:', e);
     throw e;
