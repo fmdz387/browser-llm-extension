@@ -1,8 +1,9 @@
 const { build } = require('vite');
 const { resolve } = require('path');
 const { exec } = require('child_process');
-const { copyFileSync, mkdirSync, existsSync, rmSync, writeFileSync, readdirSync } = require('fs');
+const { copyFileSync, mkdirSync, existsSync, rmSync, writeFileSync, readdirSync, readFileSync, createWriteStream } = require('fs');
 const util = require('util');
+const archiver = require('archiver');
 
 const execPromise = util.promisify(exec);
 
@@ -78,6 +79,43 @@ async function createPopupHtml() {
   }
 }
 
+async function createZip() {
+  return new Promise((resolvePromise, reject) => {
+    try {
+      // Read manifest to get name and version
+      const manifest = JSON.parse(readFileSync(resolve(__dirname, outDir, 'manifest.json'), 'utf8'));
+      const extensionName = manifest.name.toLowerCase().replace(/\s+/g, '-');
+      const version = manifest.version;
+      const zipFileName = `${extensionName}-v${version}.zip`;
+      const zipPath = resolve(__dirname, outDir, zipFileName);
+
+      const output = createWriteStream(zipPath);
+      const archive = archiver('zip', {
+        zlib: { level: 9 } // Maximum compression
+      });
+
+      output.on('close', () => {
+        const sizeKB = (archive.pointer() / 1024).toFixed(2);
+        console.log(`ZIP created: ${zipFileName} (${sizeKB} KB)`);
+        resolvePromise(zipPath);
+      });
+
+      archive.on('error', (err) => {
+        reject(err);
+      });
+
+      archive.pipe(output);
+
+      // Add all files from dist/prod to the root of the ZIP
+      archive.directory(resolve(__dirname, outDir), false);
+
+      archive.finalize();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 async function buildExtension() {
   try {
     console.log(`Building extension (${isProd ? 'PRODUCTION' : 'development'})...`);
@@ -131,8 +169,13 @@ async function buildExtension() {
     await createPopupHtml();
 
     console.log(`\nExtension built successfully to ${outDir}/`);
+
+    // Create ZIP for Chrome Web Store submission (prod only)
     if (isProd) {
-      console.log('Ready for Chrome Web Store submission!');
+      console.log('\nCreating ZIP for Chrome Web Store...');
+      const zipPath = await createZip();
+      console.log(`\nReady for Chrome Web Store submission!`);
+      console.log(`Upload this file: ${zipPath}`);
     }
   } catch (e) {
     console.error('Build failed:', e);

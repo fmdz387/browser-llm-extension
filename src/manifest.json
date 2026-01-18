@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Browser LLM Assistant",
+  "name": "Browser LLM",
   "version": "1.0.0",
-  "description": "LLM powered toolset in your browser",
+  "description": "LLM powered toolset in your browser, supporting OpenRouter and local Ollama models",
 
   "icons": {
     "16": "assets/16x16.png",
@@ -10,17 +10,9 @@
     "128": "assets/128x128.png"
   },
 
-  "permissions": [
-    "storage",
-    "contextMenus",
-    "activeTab"
-  ],
+  "permissions": ["storage", "contextMenus", "activeTab"],
 
-  "host_permissions": [
-    "http://localhost:*/*",
-    "http://127.0.0.1:*/*",
-    "https://openrouter.ai/*"
-  ],
+  "host_permissions": ["https://openrouter.ai/*"],
 
   "background": {
     "service_worker": "background.js",
