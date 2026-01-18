@@ -6,13 +6,13 @@
 
 LLM-powered toolkit for your browser.
 
-A Chrome extension that brings AI-powered tools to any webpage. Currently featuring text transformations - select text, right-click, and transform it using your preferred AI provider.
+A Chrome extension that brings AI-powered tools to any webpage. Currently featuring text transformations: select text, right-click and transform it using your preferred AI provider.
 
 ## Privacy
 
 **No backend server. No middleman. Direct API calls only.**
 
-All requests are made directly from your browser to your chosen LLM provider. There is no proxy server, no data collection, and no telemetry. Your API keys and data never pass through any third-party infrastructure.
+All requests are made directly from your browser to your chosen LLM provider. There is no proxy server, no data collection and no telemetry. Your API keys and data never pass through any third-party infrastructure.
 
 - **Ollama**: Requests stay entirely on your local machine
 - **OpenRouter/OpenAI/Anthropic**: Requests go directly from your browser to the provider's API
@@ -35,6 +35,7 @@ All requests are made directly from your browser to your chosen LLM provider. Th
 | **Anthropic** | Coming Soon | Direct integration with Claude models. |
 
 ### User Experience
+- **Keyboard shortcuts**: Default `Alt+T/C/G` shortcuts, fully customizable
 - **Context menu integration**: Right-click any selected text to access transformations
 - **Inline overlay**: Results appear in a floating overlay near your selection
 - **Copy or replace**: One-click to copy the result or replace the original text
@@ -147,8 +148,34 @@ Direct integration with Anthropic's Claude models will be available in a future 
 
 1. **Configure your provider**: Click the extension icon and set up your preferred LLM provider
 2. **Select text**: Highlight any text on a webpage
-3. **Transform**: Right-click and choose a transformation from the **Browser LLM** submenu
-4. **Apply**: Click **Copy** to copy the result
+3. **Transform**: Use a keyboard shortcut or right-click and choose from the **Browser LLM** submenu
+4. **Apply**: Click **Copy** to copy the result or **Replace** to replace the original text
+
+### Keyboard Shortcuts
+
+Select text and press a shortcut to instantly transform it.
+
+| Shortcut | Action | Mac |
+|----------|--------|-----|
+| `Alt+T` | Translate to English | `⌥T` |
+| `Alt+C` | Make Concise | `⌥C` |
+| `Alt+G` | Fix Grammar | `⌥G` |
+
+Shortcuts work in regular text, input fields, textareas and contenteditable elements.
+
+**Configuring shortcuts:**
+
+1. Click the extension icon to open the popup
+2. Scroll to the **Keyboard Shortcuts** section
+3. Click on any shortcut field and press your desired key combination
+4. Shortcuts require at least one modifier key (Alt, Ctrl, Shift, or Cmd)
+
+**Adding shortcuts for custom transformations:**
+
+1. Create your custom transformation in the **Transformations** section
+2. In **Keyboard Shortcuts**, click **Add Shortcut**
+3. Select your transformation from the dropdown
+4. Record your preferred key combination
 
 ### Managing Transformations
 

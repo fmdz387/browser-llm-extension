@@ -19,6 +19,41 @@ function isEditableElement(element: Element | null): boolean {
 }
 
 /**
+ * Check if a keyboard event has "safe" modifiers that won't conflict with
+ * common text editing shortcuts in input fields.
+ *
+ * Safe combinations (rarely used by browsers/OS for text editing):
+ * - Alt + any key (except Alt+Backspace on Mac)
+ * - Ctrl/Cmd + Shift + letter (some conflict, but mostly safe)
+ * - Any modifier combo with function keys
+ */
+function hasSafeModifiers(event: KeyboardEvent): boolean {
+  const key = event.key.toLowerCase();
+
+  // Function keys are always safe with any modifiers
+  if (/^f\d+$/.test(key)) {
+    return true;
+  }
+
+  // Alt key combinations are generally safe for custom shortcuts
+  // (browsers rarely use Alt+letter for text editing)
+  if (event.altKey) {
+    return true;
+  }
+
+  // Ctrl+Shift or Cmd+Shift combinations are mostly safe
+  // (except a few like Ctrl+Shift+Z for redo)
+  const ctrlOrMeta = event.ctrlKey || event.metaKey;
+  if (ctrlOrMeta && event.shiftKey) {
+    // These specific combos conflict with common editor shortcuts
+    const conflictKeys = ['z', 'y', 'a']; // redo, redo (Windows), select all
+    return !conflictKeys.includes(key);
+  }
+
+  return false;
+}
+
+/**
  * Hook to handle keyboard shortcuts for the content script
  */
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
@@ -29,7 +64,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
   const requireTextSelection = useShortcutStore((state) => state.requireTextSelection);
   const disableInEditableFields = useShortcutStore((state) => state.disableInEditableFields);
 
-  const { hasSelection } = useSelection({ minLength: 1 });
+  const { hasSelection, isEditable } = useSelection({ minLength: 1 });
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -54,9 +89,18 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
         return;
       }
 
-      // Check focused element directly - more reliable than selection-based check
-      if (disableInEditableFields && isEditableElement(document.activeElement)) {
-        return;
+      // Handle editable fields logic:
+      // - If disableInEditableFields is true AND we're in an editable field:
+      //   - Still allow if there's text selected AND the shortcut uses safe modifiers
+      //   - This enables text transformation use cases (like Grammarly, Notion, etc.)
+      const inEditableField = isEditable || isEditableElement(document.activeElement);
+      if (disableInEditableFields && inEditableField) {
+        // Allow shortcuts in editable fields only if:
+        // 1. Text is actually selected (user wants to transform it)
+        // 2. The shortcut uses safe modifiers (won't conflict with typing)
+        if (!hasSelection || !hasSafeModifiers(event)) {
+          return;
+        }
       }
 
       // Find matching shortcut
@@ -83,6 +127,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
       requireTextSelection,
       disableInEditableFields,
       hasSelection,
+      isEditable,
       shortcuts,
       onShortcutTriggered,
     ]

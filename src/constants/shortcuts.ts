@@ -29,25 +29,25 @@ export const WINDOWS_MODIFIER_LABELS = {
 
 /**
  * Default keyboard shortcuts mapped to transformations
- * Alt+Shift+F1/F2/F3 - doesn't conflict with typing or browser shortcuts
+ * Alt + first letter of transformation name for easy memorization
  */
 export const DEFAULT_SHORTCUTS: Omit<KeyboardShortcut, 'id'>[] = [
   {
-    keys: 'alt+shift+f1',
+    keys: 'alt+t',
     actionId: DEFAULT_TRANSFORMATION_IDS.TRANSLATE_TO_ENGLISH,
     actionType: 'transformation',
     enabled: true,
     label: 'Translate to English',
   },
   {
-    keys: 'alt+shift+f2',
+    keys: 'alt+c',
     actionId: DEFAULT_TRANSFORMATION_IDS.MAKE_CONCISE,
     actionType: 'transformation',
     enabled: true,
     label: 'Make Concise',
   },
   {
-    keys: 'alt+shift+f3',
+    keys: 'alt+g',
     actionId: DEFAULT_TRANSFORMATION_IDS.FIX_GRAMMAR,
     actionType: 'transformation',
     enabled: true,

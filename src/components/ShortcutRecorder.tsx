@@ -33,7 +33,9 @@ export function ShortcutRecorder({
   const [currentModifiers, setCurrentModifiers] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [showHint, setShowHint] = useState(false);
   const inputRef = useRef<HTMLButtonElement>(null);
+  const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shortcuts = useShortcutStore((state) => state.shortcuts);
 
@@ -50,6 +52,11 @@ export function ShortcutRecorder({
         setCurrentModifiers([]);
         setValidationError(null);
         setValidationWarning(null);
+        setShowHint(false);
+        if (hintTimeoutRef.current) {
+          clearTimeout(hintTimeoutRef.current);
+          hintTimeoutRef.current = null;
+        }
         return;
       }
 
@@ -57,10 +64,25 @@ export function ShortcutRecorder({
       const modifiers = getModifiersFromEvent(event);
       setCurrentModifiers(modifiers);
 
-      // If only modifiers pressed, wait for main key
+      // If only modifiers pressed, show hint after a short delay
       if (isModifierOnlyEvent(event)) {
+        // Clear any existing timeout
+        if (hintTimeoutRef.current) {
+          clearTimeout(hintTimeoutRef.current);
+        }
+        // Show hint after 800ms if still holding modifiers
+        hintTimeoutRef.current = setTimeout(() => {
+          setShowHint(true);
+        }, 800);
         return;
       }
+
+      // Clear hint timeout since we got a main key
+      if (hintTimeoutRef.current) {
+        clearTimeout(hintTimeoutRef.current);
+        hintTimeoutRef.current = null;
+      }
+      setShowHint(false);
 
       // Got a complete shortcut
       const shortcutString = eventToShortcutString(event);
@@ -109,6 +131,15 @@ export function ShortcutRecorder({
       // Update modifiers when released
       const modifiers = getModifiersFromEvent(event);
       setCurrentModifiers(modifiers);
+
+      // If all modifiers released, clear hint and reset state
+      if (modifiers.length === 0) {
+        setShowHint(false);
+        if (hintTimeoutRef.current) {
+          clearTimeout(hintTimeoutRef.current);
+          hintTimeoutRef.current = null;
+        }
+      }
     },
     [isRecording]
   );
@@ -117,8 +148,22 @@ export function ShortcutRecorder({
     if (isRecording) {
       setIsRecording(false);
       setCurrentModifiers([]);
+      setShowHint(false);
+      if (hintTimeoutRef.current) {
+        clearTimeout(hintTimeoutRef.current);
+        hintTimeoutRef.current = null;
+      }
     }
   }, [isRecording]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hintTimeoutRef.current) {
+        clearTimeout(hintTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isRecording) {
@@ -137,6 +182,7 @@ export function ShortcutRecorder({
     setIsRecording(true);
     setValidationError(null);
     setCurrentModifiers([]);
+    setShowHint(false);
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -151,20 +197,30 @@ export function ShortcutRecorder({
     if (modifiers.length === 0) return '';
 
     const symbols = isMac ? MAC_MODIFIER_SYMBOLS : WINDOWS_MODIFIER_LABELS;
-    const separator = isMac ? '' : '+';
+    const separator = isMac ? '' : ' + ';
 
     return modifiers
       .map((m) => symbols[m as keyof typeof symbols] || m)
-      .join(separator) + (isMac ? '' : '+');
+      .join(separator);
   };
 
-  const displayValue = isRecording
-    ? currentModifiers.length > 0
-      ? formatModifiersForDisplay(currentModifiers) + '...'
-      : 'Press keys...'
-    : value
-      ? formatShortcutForDisplay(value)
-      : placeholder;
+  // Build display value with clear visual feedback
+  const getDisplayValue = (): string => {
+    if (!isRecording) {
+      return value ? formatShortcutForDisplay(value) : placeholder;
+    }
+
+    if (currentModifiers.length > 0) {
+      // Show modifiers with a visual indicator for the expected key
+      const modifiersStr = formatModifiersForDisplay(currentModifiers);
+      const keySeparator = isMac ? '' : ' + ';
+      return `${modifiersStr}${keySeparator}_`;
+    }
+
+    return 'Type shortcut...';
+  };
+
+  const displayValue = getDisplayValue();
 
   return (
     <div className="space-y-1">
@@ -175,8 +231,9 @@ export function ShortcutRecorder({
           variant="outline"
           size="sm"
           className={cn(
-            'min-w-[120px] justify-start font-mono text-xs',
+            'min-w-[140px] justify-start font-mono text-xs',
             isRecording && 'ring-2 ring-primary',
+            isRecording && currentModifiers.length > 0 && 'bg-primary/5',
             !value && !isRecording && 'text-muted-foreground',
             disabled && 'opacity-50 cursor-not-allowed'
           )}
@@ -212,6 +269,11 @@ export function ShortcutRecorder({
           </Button>
         )}
       </div>
+      {isRecording && showHint && currentModifiers.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Now press a letter, number, or function key
+        </p>
+      )}
       {validationError && (
         <p className="text-xs text-red-600 dark:text-red-400">{validationError}</p>
       )}
