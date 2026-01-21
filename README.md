@@ -4,9 +4,7 @@
   <img src="assets/512x512.png" alt="Browser LLM" width="128" height="128">
 </p>
 
-LLM-powered toolkit for your browser.
-
-A Chrome extension that brings AI-powered tools to any webpage. Currently featuring text transformations: select text, right-click and transform it using your preferred AI provider.
+Privacy-first AI toolkit for the browser. Open-source, lightweight text transformations with extensible prompts. No backend—direct API calls only. Local (Ollama) + cloud provider support.
 
 ## Privacy
 
@@ -27,12 +25,12 @@ All requests are made directly from your browser to your chosen LLM provider. Th
 
 ### LLM Providers
 
-| Provider | Status | Description |
-|----------|--------|-------------|
-| **Ollama** | Available | Run models locally with complete privacy. No API key required. |
-| **OpenRouter** | Available | Access 100+ models through a single API. Pay-per-use pricing. |
-| **OpenAI** | Coming Soon | Direct integration with GPT models. |
-| **Anthropic** | Coming Soon | Direct integration with Claude models. |
+| Provider       | Status      | Description                                                    |
+| -------------- | ----------- | -------------------------------------------------------------- |
+| **Ollama**     | Available   | Run models locally with complete privacy. No API key required. |
+| **OpenRouter** | Available   | Access 100+ models through a single API. Pay-per-use pricing.  |
+| **OpenAI**     | Coming Soon | Direct integration with GPT models.                            |
+| **Anthropic**  | Coming Soon | Direct integration with Claude models.                         |
 
 ### User Experience
 - **Keyboard shortcuts**: Default `Alt+T/C/G` shortcuts, fully customizable
@@ -155,11 +153,11 @@ Direct integration with Anthropic's Claude models will be available in a future 
 
 Select text and press a shortcut to instantly transform it.
 
-| Shortcut | Action | Mac |
-|----------|--------|-----|
-| `Alt+T` | Translate to English | `⌥T` |
-| `Alt+C` | Make Concise | `⌥C` |
-| `Alt+G` | Fix Grammar | `⌥G` |
+| Shortcut | Action               | Mac  |
+| -------- | -------------------- | ---- |
+| `Alt+T`  | Translate to English | `⌥T` |
+| `Alt+C`  | Make Concise         | `⌥C` |
+| `Alt+G`  | Fix Grammar          | `⌥G` |
 
 Shortcuts work in regular text, input fields, textareas and contenteditable elements.
 
