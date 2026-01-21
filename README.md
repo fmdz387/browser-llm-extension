@@ -4,7 +4,7 @@
   <img src="assets/512x512.png" alt="Browser LLM" width="128" height="128">
 </p>
 
-Privacy-first AI toolkit for the browser. Open-source, lightweight text transformations with extensible prompts. No backend—direct API calls only. Local (Ollama) + cloud provider support.
+Privacy-first AI toolkit for the browser. Open-source, lightweight text transformations with extensible prompts. No backend - direct API calls only. Local (Ollama) + cloud provider support.
 
 ## Privacy
 
