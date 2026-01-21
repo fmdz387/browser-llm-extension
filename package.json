@@ -1,7 +1,7 @@
 {
   "name": "browser-llm",
   "version": "1.0.0",
-  "description": "LLM-powered toolkit for your browser",
+  "description": "Privacy-first AI toolkit for the browser. Open-source, lightweight text transformations with extensible prompts. No backend—direct API calls only. Local (Ollama) + cloud provider support.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.22.0",
