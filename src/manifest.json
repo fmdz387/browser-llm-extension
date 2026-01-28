@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Browser LLM",
   "version": "1.0.0",
-  "description": "Privacy-first AI toolkit for the browser. Open-source, lightweight text transformations with extensible prompts. No backend - direct API calls only. Local (Ollama) + cloud provider support.",
+  "description": "Privacy-first browser AI toolkit. Text transformations with custom prompts. Direct API calls - local & cloud LLM support.",
 
   "icons": {
     "16": "assets/16x16.png",

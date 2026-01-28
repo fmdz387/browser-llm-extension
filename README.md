@@ -41,7 +41,7 @@ All requests are made directly from your browser to your chosen LLM provider. Th
 
 ## Installation
 
-**Chrome Web Store**: Coming soon
+[Go to Chrome Web Store](https://chromewebstore.google.com/detail/browser-llm/ajogehgpdbbljibfapffbehkjmgokale)
 
 ## Development Setup
 
