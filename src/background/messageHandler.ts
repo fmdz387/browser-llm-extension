@@ -2,6 +2,7 @@ import { loadDecryptedApiKey, hasStoredApiKey } from '@/lib/secureKeyStorage';
 import { getProvider, updateProviderConfig } from '@/providers';
 import type { CompletionRequest, LLMProvider } from '@/providers';
 import { checkGrammar } from '@/services/GrammarService';
+import { extractText, OCR_DEFAULT_MODEL } from '@/services/OCRService';
 import { transform } from '@/services/TransformationService';
 import { translate } from '@/services/TranslationService';
 import { assistWriting } from '@/services/WritingService';
@@ -115,7 +116,7 @@ export async function handleMessage(
     model = providerConfig.model || null;
   }
 
-  // Check if model is required for this action
+  // Check if model is required for this action (TRANSCRIPT has its own default model)
   const requiresModel = ['TRANSLATE', 'WRITING_ASSIST', 'GRAMMAR_CHECK', 'TRANSFORM'].includes(
     message.type,
   );
@@ -267,6 +268,53 @@ export async function handleMessage(
       case 'REFRESH_CONTEXT_MENUS': {
         await registerContextMenus();
         return { success: true, data: null };
+      }
+
+      case 'OCR': {
+        const { imageData, mimeType } = message.payload;
+        // Use the configured model or fall back to the OCR default model (Gemini 3 Flash)
+        const ocrModel = model ?? OCR_DEFAULT_MODEL;
+        const result = await extractText({ imageData, mimeType }, provider, ocrModel);
+        return result.success
+          ? { success: true, data: result.data }
+          : { success: false, error: { code: result.error.code, message: result.error.message } };
+      }
+
+      case 'FETCH_IMAGE': {
+        const { imageUrl } = message.payload;
+        try {
+          // Background script can fetch without CORS restrictions
+          const response = await fetch(imageUrl);
+          if (!response.ok) {
+            return {
+              success: false,
+              error: { code: 'FETCH_FAILED', message: `Failed to fetch image: ${response.status}` },
+            };
+          }
+
+          const blob = await response.blob();
+          const mimeType = blob.type || 'image/png';
+
+          // Convert to base64
+          const arrayBuffer = await blob.arrayBuffer();
+          const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+
+          return {
+            success: true,
+            data: { imageData: base64, mimeType },
+          };
+        } catch (error) {
+          console.error('[Browser LLM] FETCH_IMAGE error:', error);
+          return {
+            success: false,
+            error: {
+              code: 'FETCH_FAILED',
+              message: error instanceof Error ? error.message : 'Failed to fetch image',
+            },
+          };
+        }
       }
 
       default:

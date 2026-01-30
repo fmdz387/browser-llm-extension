@@ -65,6 +65,22 @@ export class OpenRouterAdapter implements LLMProvider {
   }
 
   /**
+   * Format message content for OpenRouter SDK
+   * Handles both string content and multimodal content arrays
+   * Note: OpenRouter SDK expects camelCase (imageUrl), not snake_case (image_url)
+   */
+  private formatMessageContent(
+    content: string | Array<{ type: string; text?: string; imageUrl?: { url: string } }>,
+  ): string | Array<{ type: string; text?: string; imageUrl?: { url: string } }> {
+    // If it's a string, return as-is
+    if (typeof content === 'string') {
+      return content;
+    }
+    // If it's an array (multimodal), return as-is for OpenRouter SDK
+    return content;
+  }
+
+  /**
    * Complete a chat request (non-streaming)
    */
   async complete(request: CompletionRequest): Promise<LLMResult<CompletionResponse>> {
@@ -77,12 +93,17 @@ export class OpenRouterAdapter implements LLMProvider {
     }
 
     try {
+      // Format messages for OpenRouter SDK
+      // SDK accepts both string content and multimodal content arrays
+      const formattedMessages = request.messages.map((m) => ({
+        role: m.role,
+        content: this.formatMessageContent(m.content),
+      }));
+
       const response = await this.client.chat.send({
         model,
-        messages: request.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: formattedMessages as any,
         stream: false,
         temperature: request.options?.temperature ?? undefined,
         maxTokens: request.options?.maxTokens ?? undefined,
@@ -127,12 +148,16 @@ export class OpenRouterAdapter implements LLMProvider {
     }
 
     try {
+      // Format messages for OpenRouter SDK
+      const formattedMessages = request.messages.map((m) => ({
+        role: m.role,
+        content: this.formatMessageContent(m.content),
+      }));
+
       const stream = await this.client.chat.send({
         model,
-        messages: request.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: formattedMessages as any,
         stream: true,
         temperature: request.options?.temperature ?? undefined,
         maxTokens: request.options?.maxTokens ?? undefined,

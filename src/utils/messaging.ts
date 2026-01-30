@@ -50,7 +50,6 @@ export function sendToTab<T>(tabId: number, message: unknown): Promise<T | undef
 
     chrome.tabs.sendMessage(tabId, message, (response) => {
       if (chrome.runtime.lastError) {
-        // Tab may not have content script loaded - this is often expected
         resolve(undefined);
       } else {
         resolve(response);

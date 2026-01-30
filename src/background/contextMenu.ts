@@ -5,6 +5,9 @@ import { sendToTab } from '@/utils/messaging';
 // Prefix for transformation menu item IDs
 const TRANSFORM_ID_PREFIX = 'browser-llm-transform-';
 
+// OCR context menu ID
+const OCR_MENU_ID = 'browser-llm-ocr';
+
 // Maximum number of context menu items (Chrome has limits)
 const MAX_MENU_ITEMS = 50;
 
@@ -91,8 +94,15 @@ export async function registerContextMenus(): Promise<void> {
         contexts: ['selection'],
       });
 
+      // Create separate OCR menu item for images (not under parent, direct context menu)
+      createMenuItem({
+        id: OCR_MENU_ID,
+        title: 'Extract Text (OCR)',
+        contexts: ['image'],
+      });
+
       console.log(
-        `[Browser LLM] Context menus registered with ${enabledTransformations.length} transformations`,
+        `[Browser LLM] Context menus registered with ${enabledTransformations.length} transformations + OCR`,
       );
     } finally {
       registrationInProgress = null;
@@ -136,5 +146,30 @@ export async function handleContextMenuClick(
 
     sendToTab(tab.id, message);
     console.log(`[Browser LLM] Context menu action: transform (${transformationId})`);
+    return;
+  }
+
+  // Handle OCR menu item click
+  if (menuItemId === OCR_MENU_ID) {
+    // info.srcUrl contains the image URL when right-clicking on an image
+    const imageUrl = info.srcUrl;
+
+    if (!imageUrl) {
+      console.warn('[Browser LLM] No image URL for OCR action');
+      return;
+    }
+
+    const message: ContextMenuAction = {
+      type: 'CONTEXT_MENU_ACTION',
+      action: 'ocr',
+      imageUrl,
+    };
+
+    console.log(`[Browser LLM] Sending OCR message to tab ${tab.id}:`, message);
+    sendToTab(tab.id, message).then((response) => {
+      console.log(`[Browser LLM] OCR message sent, response:`, response);
+    }).catch((err) => {
+      console.error(`[Browser LLM] Failed to send OCR message:`, err);
+    });
   }
 }

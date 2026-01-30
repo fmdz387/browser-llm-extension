@@ -1,11 +1,30 @@
 // Provider Abstraction Types
 
 /**
+ * Content part for multimodal messages
+ * Note: OpenRouter SDK expects camelCase (imageUrl), not snake_case (image_url)
+ */
+export interface TextContentPart {
+  type: 'text';
+  text: string;
+}
+
+export interface ImageContentPart {
+  type: 'image_url';
+  imageUrl: {
+    url: string; // Can be URL or data:image/...;base64,...
+  };
+}
+
+export type MessageContentPart = TextContentPart | ImageContentPart;
+
+/**
  * Unified message format for all LLM providers
+ * Content can be a string (text-only) or array (multimodal)
  */
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: string | MessageContentPart[];
 }
 
 /**

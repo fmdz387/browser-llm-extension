@@ -15,7 +15,6 @@ export function ShortcutSettings() {
     disableInEditableFields,
     setShortcut,
     addCustomShortcut,
-    removeShortcut,
     toggleShortcut,
     resetToDefaults,
     setGlobalEnabled,

@@ -96,7 +96,7 @@ export function App() {
 
       {/* Footer */}
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Right-click or use shortcuts on selected text
+        Right-click text to transform or images to extract text
       </p>
     </div>
   );

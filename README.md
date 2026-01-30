@@ -4,7 +4,7 @@
   <img src="assets/512x512.png" alt="Browser LLM" width="128" height="128">
 </p>
 
-Privacy-first AI toolkit for the browser. Open-source, lightweight text transformations with extensible prompts. No backend - direct API calls only. Local (Ollama) + cloud provider support.
+Privacy-first AI toolkit for the browser. Open-source, lightweight text transformations with extensible prompts and AI image text extraction (OCR). No backend - direct API calls only. Local (Ollama) + cloud provider support.
 
 ## Privacy
 
@@ -23,6 +23,11 @@ All requests are made directly from your browser to your chosen LLM provider. Th
 - **Enable/disable transformations**: Toggle individual transformations on or off to customize your context menu
 - **Reorder transformations**: Arrange transformations in your preferred order
 
+### AI Image Text Extraction (OCR)
+- **Extract text from any image**: Right-click on any image and select "Extract Text (OCR)" to extract text using AI vision
+- **Powered by Gemini Flash**: Uses Google's Gemini 3 Flash model via OpenRouter for fast, accurate text extraction
+- **Works with any image**: Screenshots, photos, documents, diagrams - any image containing text
+
 ### LLM Providers
 
 | Provider       | Status      | Description                                                    |
@@ -34,7 +39,7 @@ All requests are made directly from your browser to your chosen LLM provider. Th
 
 ### User Experience
 - **Keyboard shortcuts**: Default `Alt+T/C/G` shortcuts, fully customizable
-- **Context menu integration**: Right-click any selected text to access transformations
+- **Context menu integration**: Right-click any selected text to access transformations, or right-click images for OCR
 - **Inline overlay**: Results appear in a floating overlay near your selection
 - **Copy or replace**: One-click to copy the result or replace the original text
 - **Secure API key storage**: API keys are encrypted before being stored locally
@@ -148,6 +153,14 @@ Direct integration with Anthropic's Claude models will be available in a future 
 2. **Select text**: Highlight any text on a webpage
 3. **Transform**: Use a keyboard shortcut or right-click and choose from the **Browser LLM** submenu
 4. **Apply**: Click **Copy** to copy the result or **Replace** to replace the original text
+
+### Extracting Text from Images - Optical Character Recognition (OCR)
+
+1. **Right-click on any image** on a webpage
+2. Select **Extract Text (OCR)** from the context menu
+3. The extracted text appears in an overlay near the image
+
+OCR uses Gemini 3 Flash via OpenRouter, so an OpenRouter API key is required for this feature.
 
 ### Keyboard Shortcuts
 

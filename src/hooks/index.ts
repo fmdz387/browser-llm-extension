@@ -10,4 +10,4 @@ export { useCopyToClipboard } from './useCopyToClipboard';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 export { useTransformationAction } from './useTransformationAction';
-export type { ActionType, TransformationInfo } from './useTransformationAction';
+export type { ActionType, TransformationInfo, OCRData } from './useTransformationAction';

@@ -27,6 +27,20 @@ export interface StreamPayload {
   system?: string;
 }
 
+export interface OCRPayload {
+  imageData: string; // Base64 encoded image data or URL
+  mimeType?: string; // e.g., 'image/png', 'image/jpeg'
+}
+
+export interface FetchImagePayload {
+  imageUrl: string;
+}
+
+export interface FetchImageResult {
+  imageData: string; // Base64 encoded
+  mimeType: string;
+}
+
 export type ExtensionRequest =
   | { type: 'TRANSLATE'; payload: TranslatePayload }
   | { type: 'WRITING_ASSIST'; payload: WritingPayload }
@@ -38,7 +52,9 @@ export type ExtensionRequest =
   | { type: 'TEST_CONNECTION' }
   | { type: 'CANCEL_REQUEST'; payload: { requestId: string } }
   | { type: 'TRANSFORM'; payload: TransformPayload }
-  | { type: 'REFRESH_CONTEXT_MENUS' };
+  | { type: 'REFRESH_CONTEXT_MENUS' }
+  | { type: 'OCR'; payload: OCRPayload }
+  | { type: 'FETCH_IMAGE'; payload: FetchImagePayload };
 
 // ===== Response Types (background -> content script/popup) =====
 
@@ -93,8 +109,9 @@ export type StreamMessage =
 
 export interface ContextMenuAction {
   type: 'CONTEXT_MENU_ACTION';
-  action: 'translate' | 'improve' | 'grammar' | 'transform';
+  action: 'translate' | 'improve' | 'grammar' | 'transform' | 'ocr';
   transformationId?: string; // For custom transformations (title/description looked up from store)
+  imageUrl?: string; // For OCR action - the image source URL
 }
 
 // ===== Configuration Types =====
@@ -144,6 +161,10 @@ export interface GrammarResult {
     corrected: string;
     explanation?: string;
   }>;
+}
+
+export interface OCRResult {
+  text: string;
 }
 
 export interface AvailableModel {

@@ -2,13 +2,14 @@ import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { useCopyToClipboard, useStreamingResponse } from '@/hooks';
+import type { OCRData } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { sendMessage } from '@/utils/messaging';
 import { Check, Loader, Sparkles, X, XCircle } from 'lucide-react';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-type ActionType = 'translate' | 'improve' | 'grammar' | 'transform';
+type ActionType = 'translate' | 'improve' | 'grammar' | 'transform' | 'ocr';
 type RequestStatus = 'idle' | 'loading' | 'streaming' | 'complete' | 'error';
 
 interface ResultOverlayProps {
@@ -18,6 +19,7 @@ interface ResultOverlayProps {
   transformationId?: string | null;
   transformationTitle?: string;
   transformationDescription?: string;
+  ocrData?: OCRData | null;
   onClose: () => void;
 }
 
@@ -63,6 +65,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
   improve: 'Improved',
   grammar: 'Grammar',
   transform: 'Transform',
+  ocr: 'Extract Text (OCR)',
 };
 
 interface HeaderProps {
@@ -221,6 +224,7 @@ export function ResultOverlay({
   transformationId,
   transformationTitle,
   transformationDescription,
+  ocrData,
   onClose,
 }: ResultOverlayProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -255,7 +259,10 @@ export function ResultOverlay({
 
   // Execute action when triggered
   useEffect(() => {
-    if (!action || !selectedText) return;
+    // OCR action doesn't need selectedText, other actions do
+    if (!action) return;
+    if (action !== 'ocr' && !selectedText) return;
+    if (action === 'ocr' && !ocrData) return;
 
     const executeAction = async () => {
       setStatus('loading');
@@ -264,7 +271,7 @@ export function ResultOverlay({
       reset();
 
       try {
-        const response = await sendActionRequest(action, selectedText, transformationId);
+        const response = await sendActionRequest(action, selectedText, transformationId, ocrData);
 
         if (response?.success && response.data) {
           setResult(extractResultText(response.data as Record<string, unknown>));
@@ -280,7 +287,7 @@ export function ResultOverlay({
     };
 
     executeAction();
-  }, [action, selectedText, transformationId, reset]);
+  }, [action, selectedText, transformationId, ocrData, reset]);
 
   // Handlers
   const handleClose = useCallback(() => {
@@ -355,6 +362,7 @@ async function sendActionRequest(
   action: ActionType,
   text: string,
   transformationId?: string | null,
+  ocrData?: OCRData | null,
 ) {
   switch (action) {
     case 'translate':
@@ -382,6 +390,15 @@ async function sendActionRequest(
       return sendMessage({
         type: 'TRANSFORM',
         payload: { text, transformationId },
+      });
+
+    case 'ocr':
+      if (!ocrData) {
+        return { success: false as const, error: { code: 'NO_IMAGE', message: 'No image data provided' } };
+      }
+      return sendMessage({
+        type: 'OCR',
+        payload: { imageData: ocrData.imageData, mimeType: ocrData.mimeType },
       });
   }
 }

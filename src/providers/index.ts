@@ -4,14 +4,17 @@
 export type {
   CompletionRequest,
   CompletionResponse,
+  ImageContentPart,
   LLMError,
   LLMMessage,
   LLMProvider,
   LLMResult,
+  MessageContentPart,
   ModelInfo,
   ProviderConfig,
   ProviderType,
   StreamToken,
+  TextContentPart,
 } from './types';
 
 export { LLMErrorCode } from './types';

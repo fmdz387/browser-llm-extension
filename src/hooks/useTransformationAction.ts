@@ -1,12 +1,19 @@
 import { useCallback, useState } from 'react';
 import type { Transformation } from '@/types/transformations';
 
-export type ActionType = 'translate' | 'improve' | 'grammar' | 'transform' | null;
+export type ActionType = 'translate' | 'improve' | 'grammar' | 'transform' | 'ocr' | null;
 
 export interface TransformationInfo {
   id: string;
   title?: string;
   description?: string;
+}
+
+/** OCR-specific data for image extraction */
+export interface OCRData {
+  imageData: string; // Base64 encoded image
+  mimeType: string;
+  source: 'clipboard' | 'url'; // Where the image came from
 }
 
 interface SelectionData {
@@ -18,11 +25,13 @@ interface TransformationActionState {
   action: ActionType;
   transformationInfo: TransformationInfo | null;
   frozenSelection: SelectionData | null;
+  ocrData: OCRData | null;
 }
 
 interface UseTransformationActionReturn extends TransformationActionState {
   triggerTransformation: (transformationId: string, selection: SelectionData) => void;
   triggerBuiltinAction: (actionType: 'translate' | 'improve' | 'grammar', selection: SelectionData) => void;
+  triggerOCR: (ocrData: OCRData, position?: { x: number; y: number }) => void;
   clearAction: () => void;
 }
 
@@ -54,6 +63,7 @@ export function useTransformationAction(): UseTransformationActionReturn {
     action: null,
     transformationInfo: null,
     frozenSelection: null,
+    ocrData: null,
   });
 
   const triggerTransformation = useCallback((transformationId: string, selection: SelectionData) => {
@@ -62,6 +72,7 @@ export function useTransformationAction(): UseTransformationActionReturn {
       action: 'transform',
       transformationInfo: { id: transformationId },
       frozenSelection: selection,
+      ocrData: null,
     });
 
     // Async lookup from Chrome storage (content script doesn't have hydrated Zustand store)
@@ -85,6 +96,25 @@ export function useTransformationAction(): UseTransformationActionReturn {
         action: actionType,
         transformationInfo: null,
         frozenSelection: selection,
+        ocrData: null,
+      });
+    },
+    []
+  );
+
+  const triggerOCR = useCallback(
+    (ocrData: OCRData, position?: { x: number; y: number }) => {
+      // For OCR, we create a fake selection rect at the position (or center of screen)
+      const x = position?.x ?? window.innerWidth / 2;
+      const y = position?.y ?? window.innerHeight / 3;
+
+      const fakeRect = new DOMRect(x, y, 0, 0);
+
+      setState({
+        action: 'ocr',
+        transformationInfo: null,
+        frozenSelection: { text: '', rect: fakeRect },
+        ocrData,
       });
     },
     []
@@ -95,6 +125,7 @@ export function useTransformationAction(): UseTransformationActionReturn {
       action: null,
       transformationInfo: null,
       frozenSelection: null,
+      ocrData: null,
     });
   }, []);
 
@@ -102,6 +133,7 @@ export function useTransformationAction(): UseTransformationActionReturn {
     ...state,
     triggerTransformation,
     triggerBuiltinAction,
+    triggerOCR,
     clearAction,
   };
 }

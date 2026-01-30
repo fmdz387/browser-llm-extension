@@ -7,6 +7,7 @@ import type {
   CompletionResponse,
   LLMProvider,
   LLMResult,
+  MessageContentPart,
   ModelInfo,
   StreamToken,
 } from '../types';
@@ -15,6 +16,21 @@ import { LLMErrorCode } from '../types';
 interface OllamaConfig {
   host: string;
   port: number;
+}
+
+/**
+ * Extract text content from a message that may be multimodal.
+ * Ollama doesn't support OpenRouter-style multimodal format.
+ */
+function extractTextContent(content: string | MessageContentPart[]): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+  // Extract text parts from multimodal content
+  return content
+    .filter((part) => part.type === 'text')
+    .map((part) => (part as { type: 'text'; text: string }).text)
+    .join('\n');
 }
 
 /**
@@ -88,7 +104,7 @@ export class OllamaAdapter implements LLMProvider {
         model: request.model,
         messages: request.messages.map((m) => ({
           role: m.role,
-          content: m.content,
+          content: extractTextContent(m.content),
         })),
         stream: false,
       });
@@ -132,7 +148,7 @@ export class OllamaAdapter implements LLMProvider {
         model: request.model,
         messages: request.messages.map((m) => ({
           role: m.role,
-          content: m.content,
+          content: extractTextContent(m.content),
         })),
         stream: true,
         options: {

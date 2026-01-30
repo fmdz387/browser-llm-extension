@@ -9,10 +9,44 @@ import { ShadowRootContext } from './ShadowRootContext';
 
 const CONTAINER_ID = 'browser-llm-root';
 
+// Message queue for messages that arrive before React is ready
+type QueuedMessage = { type: string; action?: string; transformationId?: string; imageUrl?: string };
+let messageQueue: QueuedMessage[] = [];
+let messageHandler: ((message: QueuedMessage) => void) | null = null;
+
+// Register the handler from React component
+export function setMessageHandler(handler: (message: QueuedMessage) => void) {
+  messageHandler = handler;
+  // Process any queued messages
+  if (messageQueue.length > 0) {
+    console.log('[Browser LLM Content] Processing', messageQueue.length, 'queued messages');
+    messageQueue.forEach(msg => handler(msg));
+    messageQueue = [];
+  }
+}
+
+export function clearMessageHandler() {
+  messageHandler = null;
+}
+
+// Set up message listener IMMEDIATELY (before React mounts)
+// This ensures we never miss messages
+chrome.runtime.onMessage.addListener((message: QueuedMessage, _sender, _sendResponse) => {
+  if (message.type !== 'CONTEXT_MENU_ACTION') {
+    return;
+  }
+
+  if (messageHandler) {
+    // React is ready, handle immediately
+    messageHandler(message);
+  } else {
+    messageQueue.push(message);
+  }
+});
+
 function initContentScript() {
   // Prevent double initialization
   if (document.getElementById(CONTAINER_ID)) {
-    console.log('[Browser LLM] Content script already initialized');
     return;
   }
 
