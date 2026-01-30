@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Browser LLM",
   "version": "1.1.0",
-  "description": "Privacy-first browser AI toolkit. Text transformations with custom prompts, AI image text extraction (OCR). Direct API calls - local & cloud LLM support.",
+  "description": "Privacy-first AI toolkit: text transformations, custom prompts, image OCR. Direct API to local & cloud LLMs.",
   "icons": {
     "16": "assets/16x16.png",
     "48": "assets/48x48.png",
