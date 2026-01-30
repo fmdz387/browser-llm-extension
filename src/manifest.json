@@ -1,31 +1,35 @@
 {
   "manifest_version": 3,
   "name": "Browser LLM",
-  "version": "1.0.0",
-  "description": "Privacy-first browser AI toolkit. Text transformations with custom prompts. Direct API calls - local & cloud LLM support.",
-
+  "version": "1.1.0",
+  "description": "Privacy-first browser AI toolkit. Text transformations with custom prompts, AI image text extraction (OCR). Direct API calls - local & cloud LLM support.",
   "icons": {
     "16": "assets/16x16.png",
     "48": "assets/48x48.png",
     "128": "assets/128x128.png"
   },
-
-  "permissions": ["storage", "contextMenus", "activeTab"],
-
-  "host_permissions": ["https://openrouter.ai/*"],
-
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://openrouter.ai/*"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ],
-
   "action": {
     "default_icon": {
       "16": "assets/16x16.png",
@@ -35,11 +39,15 @@
     "default_popup": "popup.html",
     "default_title": "Browser LLM Settings"
   },
-
   "web_accessible_resources": [
     {
-      "resources": ["content.css", "assets/*"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "content.css",
+        "assets/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

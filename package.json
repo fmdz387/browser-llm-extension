@@ -1,6 +1,6 @@
 {
   "name": "browser-llm",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Privacy-first AI toolkit for the browser. Open-source, lightweight text transformations with extensible prompts. No backend - direct API calls only. Local (Ollama) + cloud provider support.",
   "license": "MIT",
   "type": "module",
@@ -17,7 +17,10 @@
     "type-check": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor",
+    "version:major": "node scripts/bump-version.js major"
   },
   "dependencies": {
     "@openrouter/sdk": "^0.3.14",
