@@ -6,25 +6,26 @@ export interface OpenRouterModel {
 
 export const OPENROUTER_DEFAULT_MODELS: OpenRouterModel[] = [
   {
-    id: 'anthropic/claude-sonnet-4.5',
-    displayName: 'Claude Sonnet 4.5',
-    description: 'Anthropic (Default)',
+    id: 'google/gemini-3.5-flash',
+    displayName: 'Gemini 3.5 Flash',
+    description: 'Google (Default)',
   },
   {
-    id: 'xiaomi/mimo-v2-flash:free',
-    displayName: 'MiMo-V2-Flash',
-    description: 'Xiaomi (Free)',
+    id: 'deepseek/deepseek-v4-flash',
+    displayName: 'DeepSeek V4 Flash',
+    description: 'DeepSeek',
   },
   {
-    id: 'x-ai/grok-code-fast-1',
-    displayName: 'Grok Code Fast 1',
-    description: 'xAI',
-  },
-  {
-    id: 'google/gemini-3-flash-preview',
-    displayName: 'Gemini 3 Flash Preview',
-    description: 'Google',
+    id: 'anthropic/claude-sonnet-latest',
+    displayName: 'Claude Sonnet Latest',
+    description: 'Anthropic',
   },
 ];
 
 export const CUSTOM_MODEL_VALUE = '__custom__';
+
+/**
+ * Default model used when the popup first sets up OpenRouter.
+ * Matches the first entry of OPENROUTER_DEFAULT_MODELS.
+ */
+export const OPENROUTER_DEFAULT_MODEL_ID = OPENROUTER_DEFAULT_MODELS[0].id;

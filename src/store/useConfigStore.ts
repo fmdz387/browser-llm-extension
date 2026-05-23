@@ -5,6 +5,7 @@ import {
   saveEncryptedApiKey,
   clearStoredApiKey,
 } from '@/lib/secureKeyStorage';
+import { OPENROUTER_DEFAULT_MODEL_ID } from '@/constants/models';
 import type { ProviderType } from '@/providers';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -51,15 +52,15 @@ interface ConfigStore {
 }
 
 const DEFAULT_PROVIDER: ProviderConfig = {
-  type: 'ollama',
-  // Ollama settings
+  type: 'openrouter',
+  // Ollama settings (kept so the shape stays stable when user switches)
   host: 'localhost',
   port: 11434,
   // API-based provider settings
   apiKey: '',
-  modelId: '',
+  modelId: OPENROUTER_DEFAULT_MODEL_ID,
   // Common settings
-  model: '',
+  model: OPENROUTER_DEFAULT_MODEL_ID,
   temperature: 0.7,
   maxTokens: 2048,
 };
@@ -84,7 +85,7 @@ export function getProviderDisplayName(type: ProviderType): string {
 
 export const useConfigStore = create<ConfigStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       provider: DEFAULT_PROVIDER,
       features: DEFAULT_FEATURES,
       _hasHydrated: false,

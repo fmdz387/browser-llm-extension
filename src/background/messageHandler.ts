@@ -1,4 +1,5 @@
 import { loadDecryptedApiKey, hasStoredApiKey } from '@/lib/secureKeyStorage';
+import { OPENROUTER_DEFAULT_MODEL_ID } from '@/constants/models';
 import { getProvider, updateProviderConfig } from '@/providers';
 import type { CompletionRequest, LLMProvider } from '@/providers';
 import { checkGrammar } from '@/services/GrammarService';
@@ -17,12 +18,14 @@ const activeRequests = new Map<string, AbortController>();
 // Storage key for config
 const CONFIG_STORAGE_KEY = 'browser-llm-config';
 
-// Default provider config
+// Default provider config — OpenRouter so first-run works without local setup.
+// Ollama settings are still carried so users can switch back without re-typing.
 const DEFAULT_PROVIDER_CONFIG = {
-  type: 'ollama' as const,
+  type: 'openrouter' as const,
   host: 'localhost',
   port: 11434,
-  model: '',
+  model: OPENROUTER_DEFAULT_MODEL_ID,
+  modelId: OPENROUTER_DEFAULT_MODEL_ID,
 };
 
 interface StoredProviderConfig {

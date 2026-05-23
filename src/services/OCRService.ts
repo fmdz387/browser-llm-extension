@@ -9,8 +9,8 @@ export interface OCRResult {
   text: string;
 }
 
-/** Default model for OCR operations - Gemini 3 Flash via OpenRouter */
-export const OCR_DEFAULT_MODEL = 'google/gemini-3-flash-preview';
+/** Default model for OCR operations - Gemini 3.5 Flash via OpenRouter */
+export const OCR_DEFAULT_MODEL = 'google/gemini-3.5-flash';
 
 const SYSTEM_PROMPT = `You are an OCR (Optical Character Recognition) specialist. Your task is to extract ALL text from the provided image accurately.
 
