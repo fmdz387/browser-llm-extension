@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { useTransformationStore } from '@/store/useTransformationStore';
 
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { TransformationForm } from './TransformationForm';
 import { TransformationItem } from './TransformationItem';
@@ -13,12 +13,20 @@ export function TransformationList() {
     updateTransformation,
     deleteTransformation,
     toggleEnabled,
+    reorderTransformations,
   } = useTransformationStore();
 
   const [isAdding, setIsAdding] = useState(false);
 
+  // Drag-and-drop state
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+
   // Sort by order
-  const sortedTransformations = [...transformations].sort((a, b) => a.order - b.order);
+  const sortedTransformations = useMemo(
+    () => [...transformations].sort((a, b) => a.order - b.order),
+    [transformations],
+  );
 
   const handleAddNew = (data: {
     name: string;
@@ -29,6 +37,52 @@ export function TransformationList() {
     addTransformation(data);
     setIsAdding(false);
   };
+
+  const handleDragStart = useCallback((id: string) => {
+    setDraggingId(id);
+  }, []);
+
+  const handleDragEnter = useCallback(
+    (id: string) => {
+      if (!draggingId || id === draggingId) return;
+      setDropTargetId(id);
+    },
+    [draggingId],
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingId(null);
+    setDropTargetId(null);
+  }, []);
+
+  const handleDrop = useCallback(
+    (targetId: string) => {
+      if (!draggingId || draggingId === targetId) {
+        setDraggingId(null);
+        setDropTargetId(null);
+        return;
+      }
+
+      const orderedIds = sortedTransformations.map((t) => t.id);
+      const fromIndex = orderedIds.indexOf(draggingId);
+      const toIndex = orderedIds.indexOf(targetId);
+
+      if (fromIndex === -1 || toIndex === -1) {
+        setDraggingId(null);
+        setDropTargetId(null);
+        return;
+      }
+
+      const next = [...orderedIds];
+      next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, draggingId);
+
+      reorderTransformations(next);
+      setDraggingId(null);
+      setDropTargetId(null);
+    },
+    [draggingId, sortedTransformations, reorderTransformations],
+  );
 
   return (
     <div className="space-y-4">
@@ -63,12 +117,18 @@ export function TransformationList() {
             onUpdate={updateTransformation}
             onDelete={deleteTransformation}
             onToggleEnabled={toggleEnabled}
+            isDragging={draggingId === transformation.id}
+            isDropTarget={dropTargetId === transformation.id}
+            onDragStart={handleDragStart}
+            onDragEnter={handleDragEnter}
+            onDragEnd={handleDragEnd}
+            onDrop={handleDrop}
           />
         ))}
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Enable/disable transformations to show them in the right-click menu.
+        Drag the handle to reorder. Enable/disable transformations to show them in the right-click menu.
       </p>
     </div>
   );

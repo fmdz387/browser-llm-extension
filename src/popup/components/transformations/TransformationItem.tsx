@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import type { Transformation } from '@/types/transformations';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { TransformationForm } from './TransformationForm';
 import { TransformationTestPanel } from './TransformationTestPanel';
@@ -12,6 +13,12 @@ interface TransformationItemProps {
   onUpdate: (id: string, updates: Partial<Transformation>) => void;
   onDelete: (id: string) => void;
   onToggleEnabled: (id: string) => void;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  onDragStart?: (id: string) => void;
+  onDragEnter?: (id: string) => void;
+  onDragEnd?: () => void;
+  onDrop?: (id: string) => void;
 }
 
 export function TransformationItem({
@@ -19,10 +26,21 @@ export function TransformationItem({
   onUpdate,
   onDelete,
   onToggleEnabled,
+  isDragging = false,
+  isDropTarget = false,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+  onDrop,
 }: TransformationItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+
+  // Only enable native draggable when the user grabs the handle.
+  // Otherwise click-to-expand and button clicks would start drags.
+  const [draggable, setDraggable] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   const handleSave = (data: {
     name: string;
@@ -56,15 +74,70 @@ export function TransformationItem({
     );
   }
 
+  const handleNativeDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!draggable) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.effectAllowed = 'move';
+    // Some browsers require non-empty dataTransfer for drag to start
+    e.dataTransfer.setData('text/plain', transformation.id);
+    onDragStart?.(transformation.id);
+  };
+
+  const handleNativeDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    // Allow drop
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleNativeDragEnter = () => {
+    onDragEnter?.(transformation.id);
+  };
+
+  const handleNativeDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    onDrop?.(transformation.id);
+    setDraggable(false);
+  };
+
+  const handleNativeDragEnd = () => {
+    onDragEnd?.();
+    setDraggable(false);
+  };
+
   return (
-    <div className="rounded-md border bg-background">
+    <div
+      ref={rowRef}
+      draggable={draggable}
+      onDragStart={handleNativeDragStart}
+      onDragOver={handleNativeDragOver}
+      onDragEnter={handleNativeDragEnter}
+      onDrop={handleNativeDrop}
+      onDragEnd={handleNativeDragEnd}
+      className={cn(
+        'rounded-md border bg-background transition-shadow',
+        isDragging && 'opacity-50',
+        isDropTarget && 'ring-2 ring-primary',
+      )}
+    >
       {/* Header row */}
       <div className="flex items-center gap-2 p-3">
-        {/* Drag handle */}
+        {/* Drag handle — pressing the mouse here arms native drag */}
         <button
           type="button"
-          className="cursor-grab text-muted-foreground hover:text-foreground"
+          className={cn(
+            'shrink-0 text-muted-foreground hover:text-foreground',
+            draggable ? 'cursor-grabbing' : 'cursor-grab',
+          )}
           aria-label="Drag to reorder"
+          onMouseDown={() => setDraggable(true)}
+          onMouseUp={() => setDraggable(false)}
+          onMouseLeave={() => {
+            // If user releases off the handle, also disarm — drag may still
+            // initiate if mousedown was already followed by movement.
+            if (!isDragging) setDraggable(false);
+          }}
         >
           <svg
             width="16"
