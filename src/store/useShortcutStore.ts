@@ -1,5 +1,9 @@
 import { DEFAULT_SHORTCUTS } from '@/constants/shortcuts';
-import { validateShortcut, normalizeShortcutString } from '@/services/ShortcutService';
+import {
+  validateShortcut,
+  normalizeShortcutString,
+  migrateLegacyShortcutString,
+} from '@/services/ShortcutService';
 import type { KeyboardShortcut, ShortcutValidationResult } from '@/types/shortcuts';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -28,6 +32,59 @@ interface ShortcutStore {
 
 function createDefaultShortcuts(): KeyboardShortcut[] {
   return DEFAULT_SHORTCUTS.map((s) => ({ ...s, id: crypto.randomUUID() }));
+}
+
+/** Pre-v4 stock keys ("alt+t/c/g") were the original defaults. */
+const V3_STOCK_KEYS = new Set(['alt+t', 'alt+c', 'alt+g']);
+
+/** v4 stock keys (cross-platform cmdorctrl+shift+t/c/g). */
+const V4_STOCK_KEYS = new Set([
+  'cmdorctrl+shift+t',
+  'cmdorctrl+shift+c',
+  'cmdorctrl+shift+g',
+]);
+
+function isV3Stock(s: KeyboardShortcut): boolean {
+  return s.actionType === 'transformation' && V3_STOCK_KEYS.has(s.keys);
+}
+
+function isV4Stock(s: KeyboardShortcut): boolean {
+  return s.actionType === 'transformation' && V4_STOCK_KEYS.has(s.keys);
+}
+
+/**
+ * Migrate the shortcut array across schema versions.
+ *
+ * v3 → v5:
+ *   - "alt+t/c/g" stock entries → new platform-aware stock set.
+ *   - Custom "ctrl+X" entries → "cmdorctrl+X" (preserve cross-platform intent).
+ *
+ * v4 → v5:
+ *   - "cmdorctrl+shift+t/c/g" stock entries → new stock set
+ *     (drops Make Concise, adds Translate to Urban English).
+ *   - Customised entries untouched.
+ */
+function migrateShortcutsArray(existing: KeyboardShortcut[], fromVersion: number): KeyboardShortcut[] {
+  if (existing.length === 0) return createDefaultShortcuts();
+
+  // If the user is still on the original stock set, just swap to the new stock set.
+  if (fromVersion < 4 && existing.every(isV3Stock)) return createDefaultShortcuts();
+  if (fromVersion < 5 && existing.every(isV4Stock)) return createDefaultShortcuts();
+
+  return existing.map((s) => {
+    if (fromVersion < 4 && isV3Stock(s)) {
+      const next = DEFAULT_SHORTCUTS.find((d) => d.actionId === s.actionId);
+      return next ? { ...s, keys: next.keys } : s;
+    }
+    if (fromVersion < 5 && isV4Stock(s)) {
+      const next = DEFAULT_SHORTCUTS.find((d) => d.actionId === s.actionId);
+      return next ? { ...s, keys: next.keys } : s;
+    }
+    if (fromVersion < 4) {
+      return { ...s, keys: migrateLegacyShortcutString(s.keys) };
+    }
+    return s;
+  });
 }
 
 export const useShortcutStore = create<ShortcutStore>()(
@@ -96,13 +153,29 @@ export const useShortcutStore = create<ShortcutStore>()(
           state.setHasHydrated(true);
         }
       },
-      version: 3,
-      migrate: () => ({
-        shortcuts: createDefaultShortcuts(),
-        globalEnabled: true,
-        requireTextSelection: true,
-        disableInEditableFields: true,
-      }),
+      version: 5,
+      migrate: (persisted: unknown, version: number) => {
+        const fallback = {
+          shortcuts: createDefaultShortcuts(),
+          globalEnabled: true,
+          requireTextSelection: true,
+          disableInEditableFields: true,
+        };
+
+        if (!persisted || typeof persisted !== 'object') return fallback;
+        const state: Partial<ShortcutStore> = { ...persisted };
+
+        if (version < 5) {
+          const next = Array.isArray(state.shortcuts) ? state.shortcuts : [];
+          return {
+            ...fallback,
+            ...state,
+            shortcuts: migrateShortcutsArray(next, version),
+          };
+        }
+
+        return { ...fallback, ...state };
+      },
     }
   )
 );

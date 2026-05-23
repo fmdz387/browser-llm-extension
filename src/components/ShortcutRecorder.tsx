@@ -21,6 +21,27 @@ interface ShortcutRecorderProps {
   disabled?: boolean;
 }
 
+/**
+ * Display modifier symbol for a press on the current platform.
+ * On Mac we show the symbol that matches what the user is actually pressing
+ * (Cmd → ⌘, Control → ⌃) — no Cmd-as-Ctrl folding.
+ */
+function formatHeldModifiers(modifiers: string[]): string {
+  if (modifiers.length === 0) return '';
+  const symbols = isMac ? MAC_MODIFIER_SYMBOLS : WINDOWS_MODIFIER_LABELS;
+  const separator = isMac ? '' : ' + ';
+
+  // Apple HIG order: Control, Option, Shift, Command
+  const order: Array<keyof typeof MAC_MODIFIER_SYMBOLS> = isMac
+    ? ['ctrl', 'alt', 'shift', 'meta']
+    : ['ctrl', 'alt', 'shift', 'meta'];
+
+  return order
+    .filter((m) => modifiers.includes(m))
+    .map((m) => symbols[m])
+    .join(separator);
+}
+
 export function ShortcutRecorder({
   value,
   onChange,
@@ -46,8 +67,8 @@ export function ShortcutRecorder({
       event.preventDefault();
       event.stopPropagation();
 
-      // Handle Escape to cancel
-      if (event.key === 'Escape') {
+      // Escape cancels recording
+      if (event.key === 'Escape' && !event.ctrlKey && !event.metaKey && !event.altKey) {
         setIsRecording(false);
         setCurrentModifiers([]);
         setValidationError(null);
@@ -60,61 +81,49 @@ export function ShortcutRecorder({
         return;
       }
 
-      // Update current modifiers display
+      // Update modifier indicator
       const modifiers = getModifiersFromEvent(event);
       setCurrentModifiers(modifiers);
 
-      // If only modifiers pressed, show hint after a short delay
+      // Only modifiers pressed -> show hint after delay
       if (isModifierOnlyEvent(event)) {
-        // Clear any existing timeout
-        if (hintTimeoutRef.current) {
-          clearTimeout(hintTimeoutRef.current);
-        }
-        // Show hint after 800ms if still holding modifiers
-        hintTimeoutRef.current = setTimeout(() => {
-          setShowHint(true);
-        }, 800);
+        if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
+        hintTimeoutRef.current = setTimeout(() => setShowHint(true), 800);
         return;
       }
 
-      // Clear hint timeout since we got a main key
+      // Main key pressed
       if (hintTimeoutRef.current) {
         clearTimeout(hintTimeoutRef.current);
         hintTimeoutRef.current = null;
       }
       setShowHint(false);
 
-      // Got a complete shortcut
       const shortcutString = eventToShortcutString(event);
       if (!shortcutString) return;
 
-      // Validate
       const validation = validateShortcut(shortcutString, shortcuts, excludeShortcutId);
 
       if (!validation.valid) {
-        // Show error but don't accept the shortcut
-        if (validation.error?.type === 'invalid_format') {
-          setValidationError(validation.error.message);
-        } else if (validation.error?.type === 'missing_modifier') {
-          setValidationError(validation.error.message);
-        } else if (validation.error?.type === 'reserved_key') {
+        if (validation.error?.type === 'invalid_format' ||
+            validation.error?.type === 'missing_modifier' ||
+            validation.error?.type === 'reserved_key') {
           setValidationError(validation.error.message);
         } else if (validation.error?.type === 'duplicate') {
-          const label = validation.error.existingShortcut.label || validation.error.existingShortcut.actionId;
+          const label =
+            validation.error.existingShortcut.label || validation.error.existingShortcut.actionId;
           setValidationError(`Already used by "${label}"`);
         }
         onValidationChange?.(validation);
         return;
       }
 
-      // Check for system conflict warning
       if (validation.error?.type === 'system_conflict') {
         setValidationWarning(`May conflict with: ${validation.error.conflictDescription}`);
       } else {
         setValidationWarning(null);
       }
 
-      // Accept the shortcut
       setValidationError(null);
       setIsRecording(false);
       setCurrentModifiers([]);
@@ -127,12 +136,9 @@ export function ShortcutRecorder({
   const handleKeyUp = useCallback(
     (event: KeyboardEvent) => {
       if (!isRecording) return;
-
-      // Update modifiers when released
       const modifiers = getModifiersFromEvent(event);
       setCurrentModifiers(modifiers);
 
-      // If all modifiers released, clear hint and reset state
       if (modifiers.length === 0) {
         setShowHint(false);
         if (hintTimeoutRef.current) {
@@ -156,12 +162,9 @@ export function ShortcutRecorder({
     }
   }, [isRecording]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (hintTimeoutRef.current) {
-        clearTimeout(hintTimeoutRef.current);
-      }
+      if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
     };
   }, []);
 
@@ -169,7 +172,6 @@ export function ShortcutRecorder({
     if (isRecording) {
       document.addEventListener('keydown', handleKeyDown, true);
       document.addEventListener('keyup', handleKeyUp, true);
-
       return () => {
         document.removeEventListener('keydown', handleKeyDown, true);
         document.removeEventListener('keyup', handleKeyUp, true);
@@ -193,31 +195,18 @@ export function ShortcutRecorder({
     onValidationChange?.({ valid: true });
   };
 
-  const formatModifiersForDisplay = (modifiers: string[]): string => {
-    if (modifiers.length === 0) return '';
-
-    const symbols = isMac ? MAC_MODIFIER_SYMBOLS : WINDOWS_MODIFIER_LABELS;
-    const separator = isMac ? '' : ' + ';
-
-    return modifiers
-      .map((m) => symbols[m as keyof typeof symbols] || m)
-      .join(separator);
-  };
-
-  // Build display value with clear visual feedback
   const getDisplayValue = (): string => {
     if (!isRecording) {
       return value ? formatShortcutForDisplay(value) : placeholder;
     }
 
     if (currentModifiers.length > 0) {
-      // Show modifiers with a visual indicator for the expected key
-      const modifiersStr = formatModifiersForDisplay(currentModifiers);
+      const modifiersStr = formatHeldModifiers(currentModifiers);
       const keySeparator = isMac ? '' : ' + ';
       return `${modifiersStr}${keySeparator}_`;
     }
 
-    return 'Type shortcut...';
+    return 'Type shortcut…';
   };
 
   const displayValue = getDisplayValue();

@@ -31,6 +31,7 @@ const FIXED_IDS: Record<string, string> = {
   'Translate to English': DEFAULT_TRANSFORMATION_IDS.TRANSLATE_TO_ENGLISH,
   'Fix Grammar': DEFAULT_TRANSFORMATION_IDS.FIX_GRAMMAR,
   'Make Concise': DEFAULT_TRANSFORMATION_IDS.MAKE_CONCISE,
+  'Translate to Urban English': DEFAULT_TRANSFORMATION_IDS.TRANSLATE_TO_URBAN_ENGLISH,
 };
 
 function createDefaultTransformations(): Transformation[] {
@@ -43,6 +44,30 @@ function migrateToFixedIds(transformations: Transformation[]): Transformation[] 
     const fixedId = FIXED_IDS[t.name];
     return fixedId && t.id !== fixedId ? { ...t, id: fixedId } : t;
   });
+}
+
+/**
+ * Ensure every default transformation by fixed ID is present in the user's
+ * list. Existing user transformations are preserved untouched. Any missing
+ * default is appended at the end with a sensible order value so it shows up
+ * in the right-click menu and can be triggered via its default shortcut.
+ */
+function ensureDefaultsPresent(transformations: Transformation[]): Transformation[] {
+  const existingIds = new Set(transformations.map((t) => t.id));
+  const missing = DEFAULT_TRANSFORMATIONS.filter((d) => !existingIds.has(d.id));
+  if (missing.length === 0) return transformations;
+
+  const now = Date.now();
+  const maxOrder = transformations.length > 0 ? Math.max(...transformations.map((t) => t.order)) : -1;
+
+  const additions = missing.map((d, i) => ({
+    ...d,
+    order: maxOrder + 1 + i,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  return [...transformations, ...additions];
 }
 
 export const useTransformationStore = create<TransformationStore>()(
@@ -126,15 +151,17 @@ export const useTransformationStore = create<TransformationStore>()(
           if (state.transformations.length === 0) {
             state.transformations = createDefaultTransformations();
           } else {
-            state.transformations = migrateToFixedIds(state.transformations);
+            state.transformations = ensureDefaultsPresent(migrateToFixedIds(state.transformations));
           }
           state.setHasHydrated(true);
         }
       },
-      version: 2,
+      version: 3,
       migrate: (persisted: unknown) => {
         const s = persisted as { transformations?: Transformation[] };
-        if (s.transformations) s.transformations = migrateToFixedIds(s.transformations);
+        if (s.transformations) {
+          s.transformations = ensureDefaultsPresent(migrateToFixedIds(s.transformations));
+        }
         return s;
       },
     }

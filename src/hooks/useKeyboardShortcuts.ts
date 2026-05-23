@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
-import { parseShortcut, matchesShortcut } from '@/services/ShortcutService';
+import { parseShortcut, matchesShortcut, eventToCanonicalKey } from '@/services/ShortcutService';
 import { useShortcutStore } from '@/store/useShortcutStore';
+import { isMac } from '@/constants/shortcuts';
 import { useSelection } from './useSelection';
 import type { KeyboardShortcut } from '@/types/shortcuts';
 
@@ -19,35 +20,54 @@ function isEditableElement(element: Element | null): boolean {
 }
 
 /**
- * Check if a keyboard event has "safe" modifiers that won't conflict with
- * common text editing shortcuts in input fields.
+ * Whether a keyboard event uses modifiers that are safe to intercept while a
+ * user is typing in an input / textarea / contenteditable.
  *
- * Safe combinations (rarely used by browsers/OS for text editing):
- * - Alt + any key (except Alt+Backspace on Mac)
- * - Ctrl/Cmd + Shift + letter (some conflict, but mostly safe)
- * - Any modifier combo with function keys
+ * Platform-aware:
+ *  - macOS: Option ⌥ alone is NOT safe — Option+letter is how Mac users type
+ *    accented characters and symbols (⌥E → ´, ⌥U → ¨, ⌥T → †, ⌥G → ©, ...).
+ *    Safe combos require Command (⌘) or Control. Cmd+letter mostly maps to
+ *    app actions (Cmd+B = bold, Cmd+I = italic, Cmd+S = save) so we require
+ *    Cmd+Shift or Cmd+Option (or any combo with Ctrl) to avoid clobbering
+ *    rich-text editors.
+ *  - Windows/Linux: Alt+letter is safe (browsers rarely use it for text
+ *    editing). Ctrl+Shift combos are safe except for the few standard editor
+ *    bindings we exclude below.
  */
-function hasSafeModifiers(event: KeyboardEvent): boolean {
-  const key = event.key.toLowerCase();
+function hasSafeModifiersInEditable(event: KeyboardEvent): boolean {
+  const canonicalKey = eventToCanonicalKey(event);
+  if (!canonicalKey) return false;
 
   // Function keys are always safe with any modifiers
-  if (/^f\d+$/.test(key)) {
+  if (/^f\d+$/.test(canonicalKey)) {
     return true;
   }
 
-  // Alt key combinations are generally safe for custom shortcuts
-  // (browsers rarely use Alt+letter for text editing)
+  if (isMac) {
+    // Cmd-based combos: require an additional modifier (Shift or Option),
+    // OR fall through to allow any Ctrl-based combo, to keep the most common
+    // rich-text shortcuts (Cmd+B/I/U/S/Z/A/C/V/X) intact.
+    if (event.metaKey && (event.shiftKey || event.altKey || event.ctrlKey)) {
+      return true;
+    }
+    // Ctrl-only combos collide with macOS Emacs-style bindings (Ctrl+A/E/K/T)
+    // so require an extra modifier.
+    if (event.ctrlKey && (event.shiftKey || event.altKey)) {
+      return true;
+    }
+    return false;
+  }
+
+  // Windows / Linux
+  // Alt+anything is generally safe.
   if (event.altKey) {
     return true;
   }
 
-  // Ctrl+Shift or Cmd+Shift combinations are mostly safe
-  // (except a few like Ctrl+Shift+Z for redo)
-  const ctrlOrMeta = event.ctrlKey || event.metaKey;
-  if (ctrlOrMeta && event.shiftKey) {
-    // These specific combos conflict with common editor shortcuts
-    const conflictKeys = ['z', 'y', 'a']; // redo, redo (Windows), select all
-    return !conflictKeys.includes(key);
+  // Ctrl+Shift combos are safe except for editor conflicts (Ctrl+Shift+Z = redo)
+  if (event.ctrlKey && event.shiftKey) {
+    const conflictKeys = ['z', 'y', 'a'];
+    return !conflictKeys.includes(canonicalKey);
   }
 
   return false;
@@ -68,54 +88,36 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      // Skip if globally disabled or hook is disabled
-      if (!enabled || !globalEnabled) {
-        return;
-      }
+      if (!enabled || !globalEnabled) return;
 
-      // Skip if it's a repeat event (key held down)
-      if (event.repeat) {
-        return;
-      }
+      // Skip auto-repeat events
+      if (event.repeat) return;
 
       // Skip modifier-only keypresses
       const key = event.key.toLowerCase();
-      if (['control', 'shift', 'alt', 'meta'].includes(key)) {
+      if (['control', 'shift', 'alt', 'meta', 'os', 'altgraph'].includes(key)) {
         return;
       }
 
-      // Check if we should skip based on settings
-      if (requireTextSelection && !hasSelection) {
-        return;
-      }
+      if (requireTextSelection && !hasSelection) return;
 
-      // Handle editable fields logic:
-      // - If disableInEditableFields is true AND we're in an editable field:
-      //   - Still allow if there's text selected AND the shortcut uses safe modifiers
-      //   - This enables text transformation use cases (like Grammarly, Notion, etc.)
+      // Editable-field gate
       const inEditableField = isEditable || isEditableElement(document.activeElement);
       if (disableInEditableFields && inEditableField) {
-        // Allow shortcuts in editable fields only if:
-        // 1. Text is actually selected (user wants to transform it)
-        // 2. The shortcut uses safe modifiers (won't conflict with typing)
-        if (!hasSelection || !hasSafeModifiers(event)) {
+        if (!hasSelection || !hasSafeModifiersInEditable(event)) {
           return;
         }
       }
 
-      // Find matching shortcut
+      // Match against configured shortcuts
       const enabledShortcuts = shortcuts.filter((s) => s.enabled);
-
       for (const shortcut of enabledShortcuts) {
         const parsed = parseShortcut(shortcut.keys);
         if (!parsed) continue;
 
         if (matchesShortcut(event, parsed)) {
-          // Prevent default browser behavior
           event.preventDefault();
           event.stopPropagation();
-
-          // Trigger the callback
           onShortcutTriggered(shortcut);
           return;
         }
@@ -136,7 +138,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions) {
   useEffect(() => {
     // Use capture phase to intercept before other handlers
     document.addEventListener('keydown', handleKeyDown, true);
-
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
     };

@@ -47,6 +47,7 @@ export const DEFAULT_TRANSFORMATION_IDS = {
   TRANSLATE_TO_ENGLISH: 'default-translate-to-english',
   FIX_GRAMMAR: 'default-fix-grammar',
   MAKE_CONCISE: 'default-make-concise',
+  TRANSLATE_TO_URBAN_ENGLISH: 'default-translate-to-urban-english',
 } as const;
 
 /**
@@ -74,6 +75,16 @@ export const DEFAULT_TRANSFORMATIONS: Omit<Transformation, 'createdAt' | 'update
     order: 1,
   },
   {
+    id: DEFAULT_TRANSFORMATION_IDS.TRANSLATE_TO_URBAN_ENGLISH,
+    name: 'Translate to Urban English',
+    title: 'Urban English',
+    description: 'Rewriting in modern urban slang',
+    instructions:
+      'Translate the text into modern urban English. Use contemporary informal vocabulary, casual phrasing, and street vernacular common in everyday American urban speech. Preserve the original meaning and intent; do not add explanations.',
+    enabled: true,
+    order: 2,
+  },
+  {
     id: DEFAULT_TRANSFORMATION_IDS.MAKE_CONCISE,
     name: 'Make Concise',
     title: 'Concise Rewrite',
@@ -81,6 +92,6 @@ export const DEFAULT_TRANSFORMATIONS: Omit<Transformation, 'createdAt' | 'update
     instructions:
       'Rewrite the text to be more concise while preserving the key information. Remove unnecessary words and redundancy.',
     enabled: true,
-    order: 2,
+    order: 3,
   },
 ];
