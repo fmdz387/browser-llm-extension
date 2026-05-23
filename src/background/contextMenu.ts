@@ -2,6 +2,33 @@ import { getTransformationsFromStorage } from '@/store/useTransformationStore';
 import type { ContextMenuAction } from '@/types/messages';
 import { sendToTab } from '@/utils/messaging';
 
+/**
+ * Open the extension's settings UI. Prefers `chrome.action.openPopup()`
+ * (Chrome 127+, requires pinned action or matching user gesture) and falls
+ * back to opening `popup.html` in a new tab if it fails — which is the
+ * common case on macOS where users keep the toolbar lean and unpin
+ * extensions.
+ */
+async function openExtensionUi(): Promise<void> {
+  if (typeof chrome.action?.openPopup === 'function') {
+    try {
+      await chrome.action.openPopup();
+      return;
+    } catch (err) {
+      console.warn(
+        '[Browser LLM] chrome.action.openPopup() failed (extension may be unpinned), falling back to tab.',
+        err,
+      );
+    }
+  }
+
+  try {
+    await chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') });
+  } catch (err) {
+    console.error('[Browser LLM] Failed to open popup in tab:', err);
+  }
+}
+
 // Prefix for transformation menu item IDs
 const TRANSFORM_ID_PREFIX = 'browser-llm-transform-';
 
@@ -128,8 +155,8 @@ export async function handleContextMenuClick(
 
   // Handle "Manage Transformations" click - open popup
   if (menuItemId === 'browser-llm-manage') {
-    chrome.action.openPopup();
-    console.log('[Browser LLM] Opening popup for transformation management');
+    await openExtensionUi();
+    console.log('[Browser LLM] Opening UI for transformation management');
     return;
   }
 

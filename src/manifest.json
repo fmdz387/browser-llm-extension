@@ -39,6 +39,27 @@
     "default_popup": "popup.html",
     "default_title": "Browser LLM Settings"
   },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "Open Browser LLM settings"
+    },
+    "translate-selection": {
+      "description": "Translate selected text to English"
+    },
+    "fix-grammar-selection": {
+      "description": "Fix grammar in selected text"
+    },
+    "translate-urban-selection": {
+      "description": "Translate selected text to urban English"
+    },
+    "make-concise-selection": {
+      "description": "Make selected text concise"
+    }
+  },
   "web_accessible_resources": [
     {
       "resources": [

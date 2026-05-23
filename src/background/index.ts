@@ -1,3 +1,4 @@
+import { handleCommand } from './commands';
 import { handleContextMenuClick, registerContextMenus } from './contextMenu';
 import { handleMessage } from './messageHandler';
 
@@ -26,9 +27,15 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   void handleContextMenuClick(info, tab);
 });
 
+// Manifest-declared keyboard commands (chrome://extensions/shortcuts)
+if (chrome.commands?.onCommand) {
+  chrome.commands.onCommand.addListener((command, tab) => {
+    void handleCommand(command, tab);
+  });
+}
+
 // Message handler from content scripts and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Handle async message processing
   handleMessage(message, sender)
     .then(sendResponse)
     .catch((error) => {
@@ -44,16 +51,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Return true to indicate async response
   return true;
-});
-
-// Keep service worker alive during long operations (optional)
-chrome.runtime.onConnect.addListener((port) => {
-  if (port.name === 'keepalive') {
-    console.log('[Browser LLM] Keepalive port connected');
-    port.onDisconnect.addListener(() => {
-      console.log('[Browser LLM] Keepalive port disconnected');
-    });
-  }
 });
 
 console.log('[Browser LLM] Service worker initialized');
